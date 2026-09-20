@@ -1,5 +1,4 @@
-export type PlaceKind = 'station' | 'food' | 'cafe' | 'tour' | 'stadium';
-export type PlaceCategory = '전체' | '먹을 곳' | '카페' | '관광명소' | '문화시설';
+export type PlaceKind = 'food' | 'cafe' | 'convenience' | 'activity' | 'tour' | 'culture' | 'event' | 'place';
 export type PanelMode = 'course' | 'explore';
 
 export type MapPosition = {
@@ -13,9 +12,12 @@ export type CoursePlace = {
   address: string;
   description: string;
   kind: PlaceKind;
-  category: Exclude<PlaceCategory, '전체'> | '이동';
-  stayMinutes: number;
-  travelMinutes: number;
+  category: string;
   position: MapPosition;
-  locked?: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  imageUrl?: string | null;
+  detailUrl?: string | null;
+  distanceMeters?: number | null;
+  provider?: 'KAKAO' | 'TOUR_API' | 'ITINERARY';
 };
