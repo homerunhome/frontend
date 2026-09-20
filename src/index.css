@@ -579,6 +579,29 @@ body { caret-color: var(--orange); }
 .places-empty-state p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
 .places-empty-state .button-add { min-height: 48px; margin: 0; padding: 0 24px; border-color: #172544; border-radius: 10px; color: white; background: #172544; }
 .places-empty-state .button-add:hover { border-color: #25385d; background: #25385d; }
+.place-search-dialog { width: min(720px, calc(100vw - 32px)); max-width: none; max-height: min(760px, calc(100dvh - 40px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--paper); box-shadow: 0 24px 72px rgba(21, 26, 33, .2); }
+.place-search-dialog::backdrop { background: rgba(24, 31, 38, .42); backdrop-filter: blur(2px); }
+.place-search-content { display: flex; flex-direction: column; max-height: min(760px, calc(100dvh - 40px)); overflow: hidden; padding: 22px; }
+.place-search-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+.place-search-heading h3 { margin: 0; font-size: 19px; }
+.place-search-heading p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.place-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.place-search-form .field input { min-height: 48px; }
+.place-search-form > .button { min-height: 48px; }
+.place-search-message { margin: 12px 0 0; color: #862b00; font-size: 13px; line-height: 1.5; }
+.place-search-results { min-height: 120px; max-height: 440px; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; margin-top: 14px; border-top: 1px solid var(--line); }
+.place-search-result { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.place-search-result-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.place-search-result-info strong { font-size: 15px; }
+.place-search-result-info span, .place-search-result-info small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.place-search-result-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.place-search-result-actions a { color: #1c5c95; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.place-search-result-actions .button { min-height: 38px; padding: 0 12px; font-size: 12px; }
+.place-search-empty { margin: auto; padding: 30px 10px; color: var(--muted); font-size: 13px; text-align: center; }
+.place-search-more { min-height: 40px; margin: 12px auto; padding: 0 16px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: white; cursor: pointer; }
+.place-search-more:disabled { cursor: wait; opacity: .65; }
+.place-search-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.place-search-footer .button { min-height: 38px; padding: 0 12px; font-size: 12px; }
 .place-list { display: flex; flex-direction: column; gap: 9px; }
 .place-row { display: grid; grid-template-columns: 29px 1fr 1.35fr 28px; align-items: end; gap: 10px; }
 .place-row > span { padding: 0 0 12px 2px; color: var(--orange); font-family: inherit; font-size: 12px; }
@@ -757,6 +780,11 @@ body { caret-color: var(--orange); }
   .station-select-trigger { min-height: 42px; padding: 0 9px; font-size: 13px; }
   .station-picker-dialog { inset: auto 0 0; width: 100%; max-width: none; max-height: 88dvh; margin: 0; border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; }
   .station-picker-dialog-content { max-height: 88dvh; padding: 20px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .place-search-dialog { inset: auto 0 0; width: 100%; max-width: none; max-height: 88dvh; margin: 0; border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; }
+  .place-search-content { max-height: 88dvh; padding: 20px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .place-search-result { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .place-search-result-actions { width: 100%; justify-content: flex-end; }
+  .place-search-footer { align-items: flex-end; }
   .route-arrow { transform: none; }
   .transport-title h3 { font-size: 16px; }
   .journey-unselected { align-items: flex-start; flex-direction: column; }

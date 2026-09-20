@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { createItinerary, getItinerary } from './api';
-import type { Itinerary, Place } from './api';
+import { createItinerary, getItinerary, searchPlaces } from './api';
+import type { Itinerary, Place, PlaceSearchResult } from './api';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
 import type { Game } from '../games/api';
@@ -12,7 +12,15 @@ type Props = {
   onSaved: (itinerary: Itinerary) => void;
 };
 
-type PlaceDraft = { key: string; name: string; address: string };
+type PlaceDraft = {
+  key: string;
+  placeId: string | null;
+  name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  placeUrl: string | null;
+};
 const PREFERENCES = [
   { value: 'BREAD', label: '빵' },
   { value: 'LOCAL_FOOD', label: '지역 먹거리' },
@@ -44,8 +52,23 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   });
   const [preferences, setPreferences] = useState<string[]>([]);
   const [places, setPlaces] = useState<PlaceDraft[]>([]);
+  const [placeSearchOpen, setPlaceSearchOpen] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([]);
+  const [placeSearchLoading, setPlaceSearchLoading] = useState(false);
+  const [placeSearchError, setPlaceSearchError] = useState('');
+  const [placeSearchPage, setPlaceSearchPage] = useState(1);
+  const [hasMorePlaces, setHasMorePlaces] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const placeDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = placeDialogRef.current;
+    if (!dialog) return;
+    if (placeSearchOpen && !dialog.open) dialog.showModal();
+    if (!placeSearchOpen && dialog.open) dialog.close();
+  }, [placeSearchOpen]);
 
   function togglePreference(value: string) {
     setPreferences((current) => current.includes(value)
@@ -53,12 +76,69 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       : [...current, value]);
   }
 
-  function addPlace() {
+  function addPlace(place?: PlaceSearchResult) {
     setPlaces((current) => [...current, {
       key: String(Date.now()) + Math.random().toString(36).slice(2),
-      name: '',
-      address: '',
+      placeId: place?.id ?? null,
+      name: place?.name ?? '',
+      address: place?.roadAddress || place?.address || '',
+      latitude: place?.latitude ?? null,
+      longitude: place?.longitude ?? null,
+      placeUrl: place?.placeUrl ?? null,
     }]);
+  }
+
+  function openPlaceSearch() {
+    setPlaceQuery('');
+    setPlaceResults([]);
+    setPlaceSearchError('');
+    setPlaceSearchPage(1);
+    setHasMorePlaces(false);
+    setPlaceSearchOpen(true);
+  }
+
+  async function searchKakaoPlaces(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const keyword = placeQuery.trim();
+    if (!keyword) {
+      setPlaceSearchError('장소 이름이나 지역을 입력해 주세요.');
+      return;
+    }
+    setPlaceSearchLoading(true);
+    setPlaceSearchError('');
+    setPlaceResults([]);
+    setPlaceSearchPage(1);
+    try {
+      const result = await searchPlaces(keyword);
+      setPlaceResults(result.places);
+      setPlaceSearchPage(result.page);
+      setHasMorePlaces(result.hasNext);
+      if (!result.places.length) setPlaceSearchError('검색 결과가 없어요. 다른 이름으로 검색해 주세요.');
+    } catch (cause) {
+      setPlaceSearchError(cause instanceof Error ? cause.message : '장소를 검색하지 못했습니다.');
+    } finally {
+      setPlaceSearchLoading(false);
+    }
+  }
+
+  async function loadMorePlaces() {
+    setPlaceSearchLoading(true);
+    setPlaceSearchError('');
+    try {
+      const result = await searchPlaces(placeQuery.trim(), placeSearchPage + 1);
+      setPlaceResults((current) => [...current, ...result.places]);
+      setPlaceSearchPage(result.page);
+      setHasMorePlaces(result.hasNext);
+    } catch (cause) {
+      setPlaceSearchError(cause instanceof Error ? cause.message : '장소를 더 불러오지 못했습니다.');
+    } finally {
+      setPlaceSearchLoading(false);
+    }
+  }
+
+  function addSearchResult(place: PlaceSearchResult) {
+    addPlace(place);
+    setPlaceSearchOpen(false);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -70,7 +150,13 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
     }
     const itineraryPlaces: Place[] = places
       .filter((place) => place.name.trim())
-      .map((place) => ({ name: place.name.trim(), address: place.address.trim() || null }));
+      .map((place) => ({
+        placeId: place.placeId,
+        name: place.name.trim(),
+        address: place.address.trim() || null,
+        latitude: place.latitude,
+        longitude: place.longitude,
+      }));
     setSaving(true);
     try {
       const created = await createItinerary({
@@ -131,27 +217,67 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
         </section>
 
         <section className="form-section">
-          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>장소 검색 없이 직접 추가해 기억해 둘 수 있어요.</p></div></div>
+          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>카카오맵에서 찾거나 직접 입력해 일정에 담아둘 수 있어요.</p></div></div>
           {!places.length && (
             <div className="places-empty-state">
-              <p>아직 추가한 장소가 없어요. 장소는 나중에 생각나도 괜찮아요.</p>
-              <button className="button button-add" type="button" onClick={addPlace}>＋ 장소 추가</button>
+              <p>카카오맵에서 장소를 찾아 원정 일정에 추가해 보세요.</p>
+              <button className="button button-add" type="button" onClick={openPlaceSearch}>＋ 장소 추가</button>
             </div>
           )}
           <div className="place-list">{places.map((place, index) => (
             <div className="place-row" key={place.key}>
               <span>{String(index + 1).padStart(2, '0')}</span>
-              <label className="field"><span>장소명</span><input value={place.name} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, name: event.target.value } : item))} placeholder="예: 성심당 본점" /></label>
-              <label className="field"><span>주소 (선택)</span><input value={place.address} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, address: event.target.value } : item))} placeholder="주소를 입력해 주세요" /></label>
+              <label className="field"><span>장소명</span><input value={place.name} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, name: event.target.value, placeId: null, latitude: null, longitude: null, placeUrl: null } : item))} placeholder="예: 성심당 본점" /></label>
+              <label className="field"><span>주소 (선택)</span><input value={place.address} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, address: event.target.value, placeId: null, latitude: null, longitude: null, placeUrl: null } : item))} placeholder="주소를 입력해 주세요" /></label>
               <button className="remove-place" type="button" aria-label={(index + 1) + '번째 장소 삭제'} onClick={() => setPlaces((current) => current.filter((item) => item.key !== place.key))}>×</button>
             </div>
           ))}</div>
-          {!!places.length && <button className="button button-add" type="button" onClick={addPlace}>＋ 장소 추가</button>}
+          {!!places.length && <button className="button button-add" type="button" onClick={openPlaceSearch}>＋ 장소 추가</button>}
         </section>
 
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="submit-row"><button className="button button-primary" type="submit" disabled={saving}>{saving ? '저장 중…' : '원정 일정 저장하기'} <span>↗</span></button></div>
       </form>
+      <dialog
+        ref={placeDialogRef}
+        className="place-search-dialog"
+        aria-labelledby="place-search-title"
+        onClose={() => setPlaceSearchOpen(false)}
+        onCancel={() => setPlaceSearchOpen(false)}
+        onClick={(event) => { if (event.target === event.currentTarget) setPlaceSearchOpen(false); }}
+      >
+        <div className="place-search-content">
+          <div className="place-search-heading">
+            <div><h3 id="place-search-title">카카오맵에서 장소 찾기</h3><p>장소를 검색하고 일정에 추가할 수 있어요.</p></div>
+            <button className="schedule-dialog-close" type="button" aria-label="장소 검색 창 닫기" onClick={() => setPlaceSearchOpen(false)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8"><path d="m6 6 12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
+          <form className="place-search-form" onSubmit={searchKakaoPlaces}>
+            <label className="field"><span>장소 또는 지역 검색</span><input autoFocus value={placeQuery} onChange={(event) => setPlaceQuery(event.target.value)} placeholder="예: 성심당, 대전역" /></label>
+            <button className="button button-primary" type="submit" disabled={placeSearchLoading}>{placeSearchLoading ? '검색 중…' : '검색'}</button>
+          </form>
+          {placeSearchError && <p className="place-search-message" role={placeResults.length ? 'status' : 'alert'}>{placeSearchError}</p>}
+          <div className="place-search-results" aria-live="polite">
+            {placeResults.map((place) => (
+              <article className="place-search-result" key={place.id}>
+                <div className="place-search-result-info">
+                  <strong>{place.name}</strong>
+                  <span>{place.roadAddress || place.address || '주소 정보 없음'}</span>
+                  {place.categoryName && <small>{place.categoryName}{place.phone ? ` · ${place.phone}` : ''}</small>}
+                </div>
+                <div className="place-search-result-actions">
+                  {place.placeUrl && <a href={place.placeUrl} target="_blank" rel="noreferrer">지도 보기</a>}
+                  <button className="button button-secondary" type="button" onClick={() => addSearchResult(place)}>일정에 추가</button>
+                </div>
+              </article>
+            ))}
+            {!placeSearchLoading && !placeSearchError && !placeResults.length && <p className="place-search-empty">장소명이나 지역을 검색해 보세요.</p>}
+            {hasMorePlaces && <button className="place-search-more" type="button" disabled={placeSearchLoading} onClick={() => void loadMorePlaces()}>{placeSearchLoading ? '불러오는 중…' : '결과 더 보기'}</button>}
+          </div>
+          <div className="place-search-footer"><span>검색 결과에서 선택하거나 직접 입력할 수 있어요.</span><button className="button button-secondary" type="button" onClick={() => { addPlace(); setPlaceSearchOpen(false); }}>직접 입력</button></div>
+        </div>
+      </dialog>
     </section>
   );
 }
