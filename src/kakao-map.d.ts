@@ -8,6 +8,8 @@ type KakaoMap = {
   panTo(position: KakaoLatLng): void;
   relayout(): void;
   setBounds(bounds: KakaoLatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;
+  setCenter(position: KakaoLatLng): void;
+  setLevel(level: number): void;
 };
 
 type KakaoLatLngBounds = {
@@ -44,7 +46,7 @@ type KakaoMapsNamespace = {
     path: KakaoLatLng[];
     strokeColor: string;
     strokeOpacity: number;
-    strokeStyle: string;
+    strokeStyle?: string;
     strokeWeight: number;
   }) => KakaoPolyline;
   ControlPosition: {
