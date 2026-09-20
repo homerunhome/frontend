@@ -8,8 +8,14 @@ type Props = {
 };
 
 const PREFERENCE_LABELS: Record<string, string> = {
+  BREAD: '빵',
+  LOCAL_FOOD: '지역 먹거리',
+  DOWNTOWN: '원도심',
+  SCIENCE: '과학',
+  CULTURE: '문화',
+  // Previously saved itineraries may still contain these values.
   FOOD: '맛집 탐방',
-  CAFE: '카페 투어',
+  CAFE: '카페',
   TOURISM: '대전 명소',
   NATURE: '산책과 휴식',
   SHOPPING: '쇼핑',

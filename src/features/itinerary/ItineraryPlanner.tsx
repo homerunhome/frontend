@@ -14,20 +14,22 @@ type Props = {
 
 type PlaceDraft = { key: string; name: string; address: string };
 const PREFERENCES = [
-  { value: 'FOOD', label: '맛집 탐방' },
-  { value: 'CAFE', label: '카페 투어' },
-  { value: 'TOURISM', label: '대전 명소' },
-  { value: 'NATURE', label: '산책과 휴식' },
-  { value: 'SHOPPING', label: '쇼핑' },
+  { value: 'BREAD', label: '빵' },
+  { value: 'LOCAL_FOOD', label: '지역 먹거리' },
+  { value: 'CAFE', label: '카페' },
+  { value: 'DOWNTOWN', label: '원도심' },
+  { value: 'SCIENCE', label: '과학' },
+  { value: 'CULTURE', label: '문화' },
 ];
 
 function PreferenceIcon({ value }: { value: string }) {
   const icons: Record<string, React.ReactNode> = {
-    FOOD: <><path d="M5 3v7M8 3v7M5 7h3M6.5 10v11M16 3v18M16 3c2 2 3 5 3 8h-3" /></>,
+    BREAD: <><path d="M4 11a8 8 0 0 1 16 0v8H4v-8Z" /><path d="M8 8v2M12 6v3M16 8v2M4 14h16" /></>,
+    LOCAL_FOOD: <><path d="M5 3v7M8 3v7M5 7h3M6.5 10v11M16 3v18M16 3c2 2 3 5 3 8h-3" /></>,
     CAFE: <><path d="M4 8h13v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z" /><path d="M17 10h1a3 3 0 0 1 0 6h-2M7 4c0 1 1 1 1 2M12 4c0 1 1 1 1 2" /></>,
-    TOURISM: <><path d="m3 9 9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 21h18M2 9h20" /></>,
-    NATURE: <><path d="M20 4C10 4 5 7 5 13a6 6 0 0 0 6 6c6 0 9-5 9-15Z" /><path d="M4 21c3-6 7-9 13-13" /></>,
-    SHOPPING: <><path d="M4 8h16l-1 13H5L4 8Z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></>,
+    DOWNTOWN: <><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6M8 10h.01M16 10h.01" /></>,
+    SCIENCE: <><circle cx="12" cy="12" r="2" /><ellipse cx="12" cy="12" rx="9" ry="4" /><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" /><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)" /></>,
+    CULTURE: <><path d="m3 9 9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 21h18M2 9h20" /></>,
   };
 
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[value]}</svg>;

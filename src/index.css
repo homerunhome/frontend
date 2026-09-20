@@ -548,7 +548,7 @@ body { caret-color: var(--orange); }
 .manual-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .manual-fields > span { grid-column: 1 / -1; color: var(--muted); font-size: 14px; font-weight: 700; }
 .manual-fields .field input { min-height: 48px; border-radius: 10px; }
-.preference-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.preference-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; }
 .preference-option {
   min-height: 144px;
   display: grid;
