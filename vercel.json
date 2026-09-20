@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/itineraries/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/course/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
