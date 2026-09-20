@@ -53,7 +53,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={screen === 'detail' ? 'app-shell app-shell-detail' : 'app-shell'}>
       <header className="site-header">
         <button className="brand" type="button" onClick={() => setScreen('games')} aria-label="홈런홈 경기 선택 화면">
           <span className="brand-name">HOMERUN<span>HOME</span></span>
@@ -67,7 +67,7 @@ export default function App() {
         {screen === 'games' && <GameSelection savedGameDates={savedGameDates} onSelect={(game) => { setSelectedGame(game); setScreen('planner'); }} />}
         {screen === 'planner' && selectedGame && <ItineraryPlanner key={selectedGame.gameId} game={selectedGame} onCancel={() => setScreen('games')} onSaved={handleSaved} />}
         {screen === 'saved' && <SavedItineraries ids={savedIds} onSelect={handleSavedSelection} onBrowseGames={() => setScreen('games')} />}
-        {screen === 'detail' && itinerary && <ItineraryDetail itinerary={itinerary} isSaved={detailFromSaved} onBack={() => setScreen(detailFromSaved ? 'saved' : 'games')} onNewPlan={() => setScreen('games')} />}
+        {screen === 'detail' && itinerary && <ItineraryDetail itinerary={itinerary} isSaved={detailFromSaved} onBack={() => setScreen(detailFromSaved ? 'saved' : 'games')} />}
       </main>
       <footer className="site-footer"><span>경기장에서 시작되는 대전의 하루</span><span>YOUR GAME. YOUR DAY.</span></footer>
     </div>
