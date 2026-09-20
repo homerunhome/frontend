@@ -20,7 +20,12 @@ export function getTrainStations(cityCode: string): Promise<TrainStation[]> {
   return request<TrainStation[]>('/api/trains/stations?' + query.toString());
 }
 
-export function getKtxSchedules(departureStationId: string, arrivalStationId: string, date: string): Promise<TrainSchedule[]> {
-  const query = new URLSearchParams({ departureStationId, arrivalStationId, date });
-  return request<TrainSchedule[]>('/api/trains/ktx?' + query.toString());
+export function getSchedulesToDaejeon(departureStationId: string, date: string): Promise<TrainSchedule[]> {
+  const query = new URLSearchParams({ departureStationId, date });
+  return request<TrainSchedule[]>('/api/trains/to-daejeon?' + query.toString());
+}
+
+export function getSchedulesFromDaejeon(arrivalStationId: string, date: string): Promise<TrainSchedule[]> {
+  const query = new URLSearchParams({ arrivalStationId, date });
+  return request<TrainSchedule[]>('/api/trains/from-daejeon?' + query.toString());
 }
