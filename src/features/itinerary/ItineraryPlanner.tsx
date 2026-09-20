@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { createItinerary, searchPlaces } from './api';
-import type { Itinerary, Place, PlaceSearchResult } from './api';
+import { generateItinerary, getTravelMinutes, searchPlaces } from './api';
+import type { Itinerary, PlaceSearchResult, TravelMode } from './api';
+import { collectOptimizedTravelTimes, resolveNamedLocation, resolvePlaceCandidates } from './routePlanning';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
 import type { Game } from '../games/api';
@@ -20,6 +21,7 @@ type PlaceDraft = {
   latitude: number | null;
   longitude: number | null;
   placeUrl: string | null;
+  stayDurationMinutes: number;
 };
 const PREFERENCES = [
   { value: 'BREAD', label: '빵' },
@@ -29,8 +31,9 @@ const PREFERENCES = [
   { value: 'SCIENCE', label: '과학' },
   { value: 'CULTURE', label: '문화' },
 ];
+
 function toLocalDateTime(value: string) {
-  return value.length === 16 ? value + ':00' : value;
+  return value.length === 16 ? `${value}:00` : value;
 }
 
 function PreferenceIcon({ value }: { value: string }) {
@@ -50,9 +53,12 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   const [journey, setJourney] = useState<JourneyInput>({
     arrivalPlace: '',
     arrivalAt: '',
+    arrivalTrain: null,
     departurePlace: '',
     departureAt: '',
+    returnTrain: null,
   });
+  const [travelMode, setTravelMode] = useState<TravelMode>('PUBLIC_TRANSIT');
   const [preferences, setPreferences] = useState<string[]>([]);
   const [places, setPlaces] = useState<PlaceDraft[]>([]);
   const [placeSearchOpen, setPlaceSearchOpen] = useState(false);
@@ -64,6 +70,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   const [hasMorePlaces, setHasMorePlaces] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [savingMessage, setSavingMessage] = useState('일정을 저장하는 중…');
   const placeDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -80,15 +87,20 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   }
 
   function addPlace(place?: PlaceSearchResult) {
+    if (places.length >= 8) {
+      setPlaceSearchError('자동 코스는 장소를 최대 8곳까지 추가할 수 있어요.');
+      return;
+    }
     setPlaces((current) => [...current, {
-      key: String(Date.now()) + Math.random().toString(36).slice(2),
-      placeId: place?.id ?? null,
-      name: place?.name ?? '',
-      address: place?.roadAddress || place?.address || '',
-      latitude: place?.latitude ?? null,
-      longitude: place?.longitude ?? null,
-      placeUrl: place?.placeUrl ?? null,
-    }]);
+        key: String(Date.now()) + Math.random().toString(36).slice(2),
+        placeId: place?.id ?? null,
+        name: place?.name ?? '',
+        address: place?.roadAddress || place?.address || '',
+        latitude: place?.latitude ?? null,
+        longitude: place?.longitude ?? null,
+        placeUrl: place?.placeUrl ?? null,
+        stayDurationMinutes: 60,
+      }]);
   }
 
   function openPlaceSearch() {
@@ -151,25 +163,46 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       setError('대전 도착·출발 장소와 시각을 모두 입력해 주세요.');
       return;
     }
-    const itineraryPlaces: Place[] = places
-      .filter((place) => place.name.trim())
-      .map((place) => ({
-        placeId: place.placeId,
-        name: place.name.trim(),
-        address: place.address.trim() || null,
-        latitude: place.latitude,
-        longitude: place.longitude,
-      }));
+    if (places.some((place) => !place.name.trim())) {
+      setError('장소명을 입력하거나 빈 장소를 삭제해 주세요.');
+      return;
+    }
+    if (places.length > 8) {
+      setError('자동 코스에는 장소를 최대 8곳까지 추가할 수 있어요.');
+      return;
+    }
     setSaving(true);
     try {
-      const itinerary = await createItinerary({
+      setSavingMessage('출발지와 장소 좌표를 확인하는 중…');
+      const [arrivalCoordinate, departureCoordinate, stadiumCoordinate, candidates] = await Promise.all([
+        resolveNamedLocation(journey.arrivalPlace.trim(), game.city),
+        resolveNamedLocation(journey.departurePlace.trim(), game.city),
+        resolveNamedLocation(game.stadium, game.city),
+        resolvePlaceCandidates(places, game.city),
+      ]);
+      setSavingMessage('각 구간의 실제 이동시간을 확인하는 중…');
+      const [travelTimes, stadiumToDepartureMinutes] = await Promise.all([
+        collectOptimizedTravelTimes(arrivalCoordinate, stadiumCoordinate, candidates, travelMode),
+        getTravelMinutes(stadiumCoordinate, departureCoordinate, travelMode),
+      ]);
+      setSavingMessage('최적 순서로 일정을 계산하고 저장하는 중…');
+      const itinerary = await generateItinerary({
         gameId: game.gameId,
         arrivalPlace: journey.arrivalPlace.trim(),
         arrivalAt: toLocalDateTime(journey.arrivalAt),
+        arrivalTrain: journey.arrivalTrain,
         departurePlace: journey.departurePlace.trim(),
         departureAt: toLocalDateTime(journey.departureAt),
+        returnTrain: journey.returnTrain,
+        stadiumEntryBufferMinutes: 30,
+        stadiumToDepartureMinutes,
+        postGameCrowdBufferMinutes: 30,
+        boardingBufferMinutes: 15,
+        expectedGameDurationMinutes: 180,
         preferences,
-        places: itineraryPlaces,
+        travelMode,
+        places: candidates,
+        travelTimes,
       });
       onSaved(itinerary);
     } catch (cause) {
@@ -214,7 +247,15 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
         </section>
 
         <section className="form-section">
-          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>추가한 순서대로 일정의 루틴에 저장돼요.</p></div></div>
+          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>선택한 장소는 실제 이동시간에 맞춰 순서를 계산해요.</p></div></div>
+          <label className="field travel-mode-field"><span>장소 간 이동수단</span>
+            <select value={travelMode} onChange={(event) => setTravelMode(event.target.value as TravelMode)}>
+              <option value="PUBLIC_TRANSIT">대중교통</option>
+              <option value="WALK">도보</option>
+              <option value="CAR">자동차</option>
+            </select>
+          </label>
+          <p className="course-order-note">선택한 장소는 실제 이동시간이 짧은 순서로 정렬됩니다. 한 장소당 체류시간은 기본 60분이며 조정할 수 있어요.</p>
           {!places.length && (
             <div className="places-empty-state">
               <p>카카오맵에서 장소를 찾아 원정 일정에 추가해 보세요.</p>
@@ -226,14 +267,15 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
               <span>{String(index + 1).padStart(2, '0')}</span>
               <label className="field"><span>장소명</span><input value={place.name} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, name: event.target.value, placeId: null, latitude: null, longitude: null, placeUrl: null } : item))} placeholder="예: 성심당 본점" /></label>
               <label className="field"><span>주소 (선택)</span><input value={place.address} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, address: event.target.value, placeId: null, latitude: null, longitude: null, placeUrl: null } : item))} placeholder="주소를 입력해 주세요" /></label>
+              <label className="field stay-duration-field"><span>체류 시간</span><span className="number-field"><input type="number" min="0" max="1440" step="15" value={place.stayDurationMinutes} onChange={(event) => setPlaces((current) => current.map((item) => item.key === place.key ? { ...item, stayDurationMinutes: Number(event.target.value) } : item))} /><small>분</small></span></label>
               <button className="remove-place" type="button" aria-label={(index + 1) + '번째 장소 삭제'} onClick={() => setPlaces((current) => current.filter((item) => item.key !== place.key))}>×</button>
             </div>
           ))}</div>
-          {!!places.length && <button className="button button-add" type="button" onClick={openPlaceSearch}>＋ 장소 추가</button>}
+          {!!places.length && places.length < 8 && <button className="button button-add" type="button" onClick={openPlaceSearch}>＋ 장소 추가</button>}
         </section>
 
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="submit-row"><button className="button button-primary" type="submit" disabled={saving}>{saving ? '저장 중…' : '원정 일정 저장하기'} <span>↗</span></button></div>
+        <div className="submit-row"><button className="button button-primary" type="submit" disabled={saving}>{saving ? savingMessage : '원정 일정 저장하기'} <span>↗</span></button></div>
       </form>
       <dialog
         ref={placeDialogRef}

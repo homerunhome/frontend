@@ -4,12 +4,15 @@ import { getSchedulesFromDaejeon, getSchedulesToDaejeon, getTrainCities, getTrai
 import type { TrainCity, TrainSchedule, TrainStation } from './api';
 import { StationSelector } from './StationSelector';
 import type { StationSelection } from './StationSelector';
+import type { ItineraryTrain } from '../itinerary/api';
 
 export type JourneyInput = {
   arrivalPlace: string;
   arrivalAt: string;
+  arrivalTrain: ItineraryTrain | null;
   departurePlace: string;
   departureAt: string;
+  returnTrain: ItineraryTrain | null;
 };
 
 type Props = {
@@ -73,6 +76,25 @@ function timeValue(value: string): string {
 function combineDateAndTime(date: string, time: string): string {
   const normalizedTime = timeValue(time);
   return date && normalizedTime ? `${date}T${normalizedTime}` : '';
+}
+
+function scheduleDateTime(date: string, value: string): string {
+  const fullDateTime = value.replace(' ', 'T');
+  const dateTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(fullDateTime)
+    ? fullDateTime
+    : combineDateAndTime(date, value);
+  return dateTime.length === 16 ? `${dateTime}:00` : dateTime;
+}
+
+function selectedTrain(schedule: TrainSchedule, date: string): ItineraryTrain {
+  return {
+    trainNumber: schedule.trainNumber,
+    trainType: schedule.trainType,
+    departureStation: schedule.departureStation,
+    departureAt: scheduleDateTime(date, schedule.departureAt),
+    arrivalStation: schedule.arrivalStation,
+    arrivalAt: scheduleDateTime(date, schedule.arrivalAt),
+  };
 }
 
 function matchesPeriod(value: string, period: SchedulePeriod): boolean {
@@ -285,7 +307,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       setArrivalPeriod('all');
       setArrivalError('');
       if (openSchedule === 'arrival') setOpenSchedule(null);
-      if (selected) onChange({ ...value, arrivalPlace: '', arrivalAt: '' });
+      if (selected) onChange({ ...value, arrivalPlace: '', arrivalAt: '', arrivalTrain: null });
     } else {
       setReturnDestination(selection);
       setReturnSchedules([]);
@@ -293,7 +315,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       setReturnPeriod('all');
       setReturnError('');
       if (openSchedule === 'return') setOpenSchedule(null);
-      if (selected) onChange({ ...value, departurePlace: '', departureAt: '' });
+      if (selected) onChange({ ...value, departurePlace: '', departureAt: '', returnTrain: null });
     }
   }
 
@@ -308,7 +330,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       setArrivalPeriod('all');
       setArrivalError('');
       if (openSchedule === 'arrival') setOpenSchedule(null);
-      if (selected) onChange({ ...value, arrivalPlace: '', arrivalAt: '' });
+      if (selected) onChange({ ...value, arrivalPlace: '', arrivalAt: '', arrivalTrain: null });
     } else {
       setReturnDaejeonStation(selection);
       setReturnDaejeonStationName(station?.stationName ?? '');
@@ -317,7 +339,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       setReturnPeriod('all');
       setReturnError('');
       if (openSchedule === 'return') setOpenSchedule(null);
-      if (selected) onChange({ ...value, departurePlace: '', departureAt: '' });
+      if (selected) onChange({ ...value, departurePlace: '', departureAt: '', returnTrain: null });
     }
   }
 
@@ -373,15 +395,27 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
 
   function choose(direction: 'arrival' | 'return', schedule: TrainSchedule) {
     if (direction === 'arrival') {
+      const train = selectedTrain(schedule, outboundDate);
       setArrivalSelected(schedule);
       setOpenSchedule(null);
       setArrivalError('');
-      onChange({ ...value, arrivalPlace: schedule.arrivalStation, arrivalAt: combineDateAndTime(outboundDate, schedule.arrivalAt) });
+      onChange({
+        ...value,
+        arrivalPlace: schedule.arrivalStation,
+        arrivalAt: train.arrivalAt,
+        arrivalTrain: train,
+      });
     } else {
+      const train = selectedTrain(schedule, returnDate);
       setReturnSelected(schedule);
       setOpenSchedule(null);
       setReturnError('');
-      onChange({ ...value, departurePlace: schedule.departureStation, departureAt: combineDateAndTime(returnDate, schedule.departureAt) });
+      onChange({
+        ...value,
+        departurePlace: schedule.departureStation,
+        departureAt: train.departureAt,
+        returnTrain: train,
+      });
     }
   }
 
@@ -396,6 +430,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       onChange({
         ...value,
         arrivalAt: arrivalSelected ? '' : combineDateAndTime(date, value.arrivalAt),
+        arrivalTrain: null,
       });
     } else {
       if (openSchedule === 'return') setOpenSchedule(null);
@@ -407,6 +442,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       onChange({
         ...value,
         departureAt: returnSelected ? '' : combineDateAndTime(date, value.departureAt),
+        returnTrain: null,
       });
     }
   }
@@ -498,8 +534,8 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
           selected={arrivalSelected}
           placeLabel="대전 도착 장소" timeLabel="대전 도착 시각"
           place={value.arrivalPlace} time={timeValue(value.arrivalAt)}
-          onPlaceChange={(arrivalPlace) => onChange({ ...value, arrivalPlace })}
-          onTimeChange={(time) => onChange({ ...value, arrivalAt: combineDateAndTime(outboundDate, time) })}
+          onPlaceChange={(arrivalPlace) => onChange({ ...value, arrivalPlace, arrivalTrain: null })}
+          onTimeChange={(time) => onChange({ ...value, arrivalAt: combineDateAndTime(outboundDate, time), arrivalTrain: null })}
         />
         <TransportCard
           title="대전 출발"
@@ -515,8 +551,8 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
           selected={returnSelected}
           placeLabel="대전 출발 장소" timeLabel="대전 출발 시각"
           place={value.departurePlace} time={timeValue(value.departureAt)}
-          onPlaceChange={(departurePlace) => onChange({ ...value, departurePlace })}
-          onTimeChange={(time) => onChange({ ...value, departureAt: combineDateAndTime(returnDate, time) })}
+          onPlaceChange={(departurePlace) => onChange({ ...value, departurePlace, returnTrain: null })}
+          onTimeChange={(time) => onChange({ ...value, departureAt: combineDateAndTime(returnDate, time), returnTrain: null })}
         />
       </div>
     </section>
