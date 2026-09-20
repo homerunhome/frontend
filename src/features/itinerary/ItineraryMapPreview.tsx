@@ -50,16 +50,15 @@ type KakaoMaps = {
 };
 type KakaoSdk = { maps: KakaoMaps };
 
-declare global {
-  interface Window {
-    kakao?: KakaoSdk;
-  }
+function getKakaoSdk(): KakaoSdk | undefined {
+  return (window as unknown as { kakao?: KakaoSdk }).kakao;
 }
 
 let sdkRequest: { appKey: string; promise: Promise<KakaoSdk> } | null = null;
 
 function loadKakaoMapSdk(appKey: string): Promise<KakaoSdk> {
-  if (window.kakao?.maps.Map) return Promise.resolve(window.kakao);
+  const existingSdk = getKakaoSdk();
+  if (existingSdk?.maps.Map) return Promise.resolve(existingSdk);
   if (sdkRequest?.appKey === appKey) return sdkRequest.promise;
 
   const promise = new Promise<KakaoSdk>((resolve, reject) => {
@@ -77,17 +76,18 @@ function loadKakaoMapSdk(appKey: string): Promise<KakaoSdk> {
     script.async = true;
     script.dataset.kakaoMapSdk = 'true';
     script.onload = () => {
-      const maps = window.kakao?.maps;
+      const maps = getKakaoSdk()?.maps;
       if (!maps?.load) {
         fail(new Error('Kakao Maps SDK did not initialize'));
         return;
       }
       maps.load(() => {
         if (settled) return;
-        if (window.kakao?.maps.Map) {
+        const loadedSdk = getKakaoSdk();
+        if (loadedSdk?.maps.Map) {
           settled = true;
           window.clearTimeout(timeoutId);
-          resolve(window.kakao);
+          resolve(loadedSdk);
         } else {
           fail(new Error('Kakao Maps SDK did not initialize'));
         }

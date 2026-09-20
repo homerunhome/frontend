@@ -10,6 +10,8 @@ type Props = {
   isSaved: boolean;
   onBack: () => void;
   onUpdated: (itinerary: Itinerary) => void;
+  initialEditing?: boolean;
+  onSaved?: (itinerary: Itinerary) => void;
 };
 
 type PlaceDraft = {
@@ -69,9 +71,9 @@ function draftFromPlace(place: ItineraryPlace, index: number): PlaceDraft {
   };
 }
 
-export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props) {
+export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initialEditing = false, onSaved }: Props) {
   const [activePlaceKey, setActivePlaceKey] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [draftPlaces, setDraftPlaces] = useState<PlaceDraft[]>([]);
   const [travelMode, setTravelMode] = useState<TravelMode>(travelModeOf(itinerary.travelMode));
   const [placeQuery, setPlaceQuery] = useState('');
@@ -95,16 +97,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
     latitude: place.latitude,
     longitude: place.longitude,
   }));
-  const planCalculated = itinerary.stadiumArrivalAt !== null;
-
-  function beginEditing() {
-    setDraftPlaces(itinerary.places.map(draftFromPlace));
-    setTravelMode(travelModeOf(itinerary.travelMode));
-    setSearchResults([]);
-    setSearchMessage('');
-    setSaveMessage('');
-    setEditing(true);
-  }
+  const planCalculated = itinerary.stadiumArrivalAt != null;
 
   async function searchPlace() {
     const keyword = placeQuery.trim();
@@ -178,7 +171,8 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
         })),
       });
       onUpdated(updated);
-      setEditing(false);
+      if (onSaved) onSaved(updated);
+      else setEditing(false);
       setSaveMessage('');
     } catch (error) {
       setSaveMessage(formatApiError(error, '일정을 다시 계산하지 못했습니다.'));
@@ -264,11 +258,11 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
                     <h1>{itinerary.homeTeam} vs {itinerary.awayTeam}</h1>
                     <p>{itinerary.stadium} · {dateLabel(itinerary.gameDate)} · {timeLabel(itinerary.gameStartTime)}</p>
                   </div>
-                  <button className="button button-primary detail-edit-button" type="button" onClick={beginEditing}>코스 수정</button>
+                  <a className="button button-primary detail-edit-button" href={`/itineraries/${itinerary.id}/course/edit`} target="_blank" rel="noopener noreferrer">코스 수정</a>
                 </div>
                 <div className="detail-summary-status">
                   <span className="detail-status-badge">{statusLabel(itinerary.status, planCalculated)}</span>
-                  {itinerary.gameStartSlackMinutes !== null && <span>경기 시작까지 {itinerary.gameStartSlackMinutes}분</span>}
+                  {itinerary.gameStartSlackMinutes != null && <span>경기 시작까지 {itinerary.gameStartSlackMinutes}분</span>}
                 </div>
               </header>
               <div className="routine-sidebar-heading"><strong>방문 순서</strong><span>{itinerary.places.length}곳</span></div>
