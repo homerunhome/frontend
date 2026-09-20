@@ -14,12 +14,24 @@ type Props = {
 
 type PlaceDraft = { key: string; name: string; address: string };
 const PREFERENCES = [
-  { value: 'FOOD', label: '맛집 탐방', mark: '식' },
-  { value: 'CAFE', label: '카페 투어', mark: '커' },
-  { value: 'TOURISM', label: '대전 명소', mark: '명' },
-  { value: 'NATURE', label: '산책과 휴식', mark: '쉼' },
-  { value: 'SHOPPING', label: '쇼핑', mark: '쇼' },
+  { value: 'FOOD', label: '맛집 탐방' },
+  { value: 'CAFE', label: '카페 투어' },
+  { value: 'TOURISM', label: '대전 명소' },
+  { value: 'NATURE', label: '산책과 휴식' },
+  { value: 'SHOPPING', label: '쇼핑' },
 ];
+
+function PreferenceIcon({ value }: { value: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    FOOD: <><path d="M5 3v7M8 3v7M5 7h3M6.5 10v11M16 3v18M16 3c2 2 3 5 3 8h-3" /></>,
+    CAFE: <><path d="M4 8h13v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z" /><path d="M17 10h1a3 3 0 0 1 0 6h-2M7 4c0 1 1 1 1 2M12 4c0 1 1 1 1 2" /></>,
+    TOURISM: <><path d="m3 9 9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 21h18M2 9h20" /></>,
+    NATURE: <><path d="M20 4C10 4 5 7 5 13a6 6 0 0 0 6 6c6 0 9-5 9-15Z" /><path d="M4 21c3-6 7-9 13-13" /></>,
+    SHOPPING: <><path d="M4 8h16l-1 13H5L4 8Z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></>,
+  };
+
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[value]}</svg>;
+}
 
 export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   const [journey, setJourney] = useState<JourneyInput>({
@@ -85,14 +97,21 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   return (
     <section className="planner-page">
       <button className="back-link" type="button" onClick={onCancel}>← 경기 목록으로</button>
-      <div className="planner-heading">
-        <div><span className="eyebrow">BUILD YOUR AWAY DAY</span><h1>대전 원정 일정을<br /><em>차근차근</em> 채워볼까요?</h1></div>
-        <div className="selected-game">
-          <span>{game.gameDate} · {game.gameStartTime.slice(0, 5)}</span>
-          <strong>{game.homeTeam} <small>VS</small> {game.awayTeam}</strong>
-          <span>{game.stadium}</span>
+      <article className="planner-game-ticket" aria-label="선택한 경기 티켓">
+        <div className="planner-ticket-match">
+          <span className="planner-ticket-kicker">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8 5.2c2.1 1.8 3.1 4 3.1 6.8S10.1 17 8 18.8M16 5.2c-2.1 1.8-3.1 4-3.1 6.8s1 5 3.1 6.8" /></svg>
+            AWAY GAME PASS
+          </span>
+          <h1 className="planner-ticket-teams"><span>{game.homeTeam}</span><small>VS</small><span>{game.awayTeam}</span></h1>
+          <span className="planner-ticket-venue"><small>구장</small>{game.stadium}</span>
         </div>
-      </div>
+        <div className="planner-ticket-date">
+          <span>경기 일시</span>
+          <time dateTime={`${game.gameDate}T${game.gameStartTime}`}>{game.gameDate.replaceAll('-', '.')}</time>
+          <strong>{game.gameStartTime.slice(0, 5)}</strong>
+        </div>
+      </article>
 
       <form className="planner-form" onSubmit={submit}>
         <TrainJourneyPicker gameDate={game.gameDate} value={journey} onChange={setJourney} />
@@ -103,7 +122,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
             const checked = preferences.includes(item.value);
             return (
               <button className={'preference-option' + (checked ? ' is-selected' : '')} type="button" aria-pressed={checked} key={item.value} onClick={() => togglePreference(item.value)}>
-                <b>{item.mark}</b><span>{item.label}</span><i>{checked ? '✓' : '+'}</i>
+                <b><PreferenceIcon value={item.value} /></b><span>{item.label}</span><i aria-hidden="true">{checked ? '✓' : ''}</i>
               </button>
             );
           })}</div>
@@ -111,7 +130,12 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
 
         <section className="form-section">
           <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>장소 검색 없이 직접 추가해 기억해 둘 수 있어요.</p></div></div>
-          {!places.length && <p className="empty-places">아직 추가한 장소가 없어요. 장소는 나중에 생각나도 괜찮아요.</p>}
+          {!places.length && (
+            <div className="places-empty-state">
+              <p>아직 추가한 장소가 없어요. 장소는 나중에 생각나도 괜찮아요.</p>
+              <button className="button button-add" type="button" onClick={addPlace}>＋ 장소 추가</button>
+            </div>
+          )}
           <div className="place-list">{places.map((place, index) => (
             <div className="place-row" key={place.key}>
               <span>{String(index + 1).padStart(2, '0')}</span>
@@ -120,11 +144,11 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
               <button className="remove-place" type="button" aria-label={(index + 1) + '번째 장소 삭제'} onClick={() => setPlaces((current) => current.filter((item) => item.key !== place.key))}>×</button>
             </div>
           ))}</div>
-          <button className="button button-add" type="button" onClick={addPlace}>＋ 장소 추가</button>
+          {!!places.length && <button className="button button-add" type="button" onClick={addPlace}>＋ 장소 추가</button>}
         </section>
 
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="submit-row"><p>저장한 일정 ID는 이 브라우저에서 다시 확인할 수 있어요.</p><button className="button button-primary" type="submit" disabled={saving}>{saving ? '저장 중…' : '원정 일정 저장하기'} <span>↗</span></button></div>
+        <div className="submit-row"><button className="button button-primary" type="submit" disabled={saving}>{saving ? '저장 중…' : '원정 일정 저장하기'} <span>↗</span></button></div>
       </form>
     </section>
   );

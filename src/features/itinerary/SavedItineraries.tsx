@@ -39,7 +39,7 @@ export function SavedItineraries({ ids, onSelect, onBrowseGames }: Props) {
 
   return (
     <section className="saved-page">
-      <div className="section-heading"><div><span className="eyebrow">YOUR SAVED PLANS</span><h1>저장한 원정 일정</h1></div><p>이 브라우저에 기록한 일정 ID를 백엔드에서 불러옵니다.</p></div>
+      <div className="section-heading"><div><h1>내 원정 기록</h1></div></div>
       {error && <p className="inline-warning" role="status">{error}</p>}
       {loading && <div className="state-panel" role="status"><span className="spinner" /> 저장한 일정을 확인하고 있어요.</div>}
       {!loading && itineraries.length === 0 && (
@@ -48,9 +48,9 @@ export function SavedItineraries({ ids, onSelect, onBrowseGames }: Props) {
       {!loading && itineraries.length > 0 && (
         <div className="saved-list">{itineraries.map((item) => (
           <button className="saved-card" key={item.id} type="button" onClick={() => onSelect(item)}>
-            <span className="saved-date">{shortDate(item.gameDate)}<small>{item.gameStartTime.slice(0, 5)}</small></span>
+            <span className="saved-date"><strong>{shortDate(item.gameDate)}</strong><small>{item.gameStartTime.slice(0, 5)}</small></span>
             <span className="saved-info"><strong>{item.homeTeam} <small>VS</small> {item.awayTeam}</strong><span>{item.stadium}</span><small>{item.arrivalPlace} 도착 · {item.arrivalAt.split('T')[1]?.slice(0, 5)}</small></span>
-            <span className="saved-id">#{item.id}　→</span>
+            <span className="saved-id"><span>#{item.id}</span><span aria-hidden="true">→</span></span>
           </button>
         ))}</div>
       )}
