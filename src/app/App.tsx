@@ -67,7 +67,7 @@ export default function App() {
         {screen === 'games' && <GameSelection savedGameDates={savedGameDates} onSelect={(game) => { setSelectedGame(game); setScreen('planner'); }} />}
         {screen === 'planner' && selectedGame && <ItineraryPlanner key={selectedGame.gameId} game={selectedGame} onCancel={() => setScreen('games')} onSaved={handleSaved} />}
         {screen === 'saved' && <SavedItineraries ids={savedIds} onSelect={handleSavedSelection} onBrowseGames={() => setScreen('games')} />}
-        {screen === 'detail' && itinerary && <ItineraryDetail itinerary={itinerary} isSaved={detailFromSaved} onBack={() => setScreen(detailFromSaved ? 'saved' : 'games')} />}
+        {screen === 'detail' && itinerary && <ItineraryDetail itinerary={itinerary} isSaved={detailFromSaved} onBack={() => setScreen(detailFromSaved ? 'saved' : 'games')} onUpdated={setItinerary} />}
       </main>
       <footer className="site-footer"><span>경기장에서 시작되는 대전의 하루</span><span>YOUR GAME. YOUR DAY.</span></footer>
     </div>

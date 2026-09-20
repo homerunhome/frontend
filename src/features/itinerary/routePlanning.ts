@@ -1,0 +1,155 @@
+import { geocodeAddress, getTravelMinutes, searchPlaces } from './api';
+import type { Coordinate, ItineraryCandidate, ItineraryRouteTime, ItineraryPlace, TravelMode } from './api';
+
+type PlaceInput = {
+  placeId?: string | null;
+  name: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  stayDurationMinutes?: number | null;
+  mustVisit?: boolean | null;
+};
+
+type RoutePair = {
+  fromPlaceId: string;
+  toPlaceId: string;
+  origin: Coordinate;
+  destination: Coordinate;
+};
+
+export async function resolvePlaceCandidates(places: PlaceInput[], cityHint = ''): Promise<ItineraryCandidate[]> {
+  return Promise.all(places.map(async (place, index) => {
+    const hasCoordinates = Number.isFinite(place.latitude) && Number.isFinite(place.longitude);
+    let coordinate: Coordinate;
+    if (hasCoordinates) {
+      coordinate = { latitude: place.latitude as number, longitude: place.longitude as number };
+    } else if (place.address?.trim()) {
+      try {
+        coordinate = await geocodeAddress(place.address.trim());
+      } catch {
+        coordinate = await resolveNamedLocation(place.name.trim(), cityHint);
+      }
+    } else {
+      coordinate = await resolveNamedLocation(place.name.trim(), cityHint);
+    }
+    const placeId = place.placeId?.trim() || `manual-${index + 1}-${Math.random().toString(36).slice(2, 10)}`;
+    if (placeId === 'ARRIVAL' || placeId === 'STADIUM') {
+      throw new Error('장소 식별자가 코스 출발지·경기장 식별자와 겹칩니다. 장소를 다시 선택해 주세요.');
+    }
+    return {
+      placeId,
+      name: place.name.trim(),
+      address: place.address?.trim() || null,
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      stayDurationMinutes: place.stayDurationMinutes ?? 60,
+      mustVisit: place.mustVisit ?? false,
+    };
+  }));
+}
+
+export async function resolveNamedLocation(location: string, cityHint = ''): Promise<Coordinate> {
+  const query = `${cityHint} ${location}`.trim();
+  try {
+    const result = await searchPlaces(query, 1, 10);
+    const normalize = (value: string) => value.replace(/\s/g, '').toLowerCase();
+    const exact = result.places.find((place) => normalize(place.name) === normalize(location));
+    const single = result.places.length === 1 ? result.places[0] : null;
+    const selected = exact ?? single;
+    if (selected) return { latitude: selected.latitude, longitude: selected.longitude };
+  } catch {
+    // Use address geocoding below when keyword lookup has no usable result.
+  }
+  return geocodeAddress(query);
+}
+
+export async function collectOptimizedTravelTimes(
+  arrival: Coordinate,
+  stadium: Coordinate,
+  places: ItineraryCandidate[],
+  mode: TravelMode,
+): Promise<ItineraryRouteTime[]> {
+  const ids = new Set(places.map((place) => place.placeId));
+  if (ids.size !== places.length) throw new Error('같은 장소가 중복으로 추가되어 있어요. 중복 장소를 삭제해 주세요.');
+
+  const pairs: RoutePair[] = [];
+  if (places.length === 0) {
+    pairs.push({ fromPlaceId: 'ARRIVAL', toPlaceId: 'STADIUM', origin: arrival, destination: stadium });
+  } else {
+    for (const place of places) {
+      pairs.push({
+        fromPlaceId: 'ARRIVAL',
+        toPlaceId: place.placeId,
+        origin: arrival,
+        destination: coordinateOf(place),
+      });
+      pairs.push({
+        fromPlaceId: place.placeId,
+        toPlaceId: 'STADIUM',
+        origin: coordinateOf(place),
+        destination: stadium,
+      });
+      for (const destination of places) {
+        if (destination.placeId === place.placeId) continue;
+        pairs.push({
+          fromPlaceId: place.placeId,
+          toPlaceId: destination.placeId,
+          origin: coordinateOf(place),
+          destination: coordinateOf(destination),
+        });
+      }
+    }
+  }
+
+  const minutes = new Array<number>(pairs.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(6, pairs.length) }, async () => {
+    while (nextIndex < pairs.length) {
+      const index = nextIndex++;
+      const pair = pairs[index];
+      minutes[index] = await getTravelMinutes(pair.origin, pair.destination, mode);
+    }
+  });
+  await Promise.all(workers);
+  return pairs.map((pair, index) => ({
+    fromPlaceId: pair.fromPlaceId,
+    toPlaceId: pair.toPlaceId,
+    minutes: minutes[index],
+  }));
+}
+
+export async function measureSequentialRoute(
+  arrival: Coordinate,
+  stadium: Coordinate,
+  departure: Coordinate,
+  places: ItineraryCandidate[],
+  mode: TravelMode,
+): Promise<{ travelFromPreviousMinutes: number[]; finalLegToStadiumMinutes: number; stadiumToDepartureMinutes: number }> {
+  const stops: { place: ItineraryPlace | ItineraryCandidate; coordinate: Coordinate }[] = places.map((place) => ({
+    place,
+    coordinate: coordinateOf(place),
+  }));
+  const travelFromPreviousMinutes: number[] = [];
+  let previous = arrival;
+  for (const stop of stops) {
+    travelFromPreviousMinutes.push(await getTravelMinutes(previous, stop.coordinate, mode));
+    previous = stop.coordinate;
+  }
+  const [finalLegToStadiumMinutes, stadiumToDepartureMinutes] = await Promise.all([
+    getTravelMinutes(previous, stadium, mode),
+    getTravelMinutes(stadium, departure, mode),
+  ]);
+  return { travelFromPreviousMinutes, finalLegToStadiumMinutes, stadiumToDepartureMinutes };
+}
+
+export function coordinateOf(place: Pick<ItineraryPlace, 'latitude' | 'longitude'>): Coordinate {
+  if (!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) {
+    throw new Error('장소 좌표를 찾을 수 없어요. 장소를 다시 검색해 주세요.');
+  }
+  return { latitude: place.latitude as number, longitude: place.longitude as number };
+}
+
+export function formatApiError(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
