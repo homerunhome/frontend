@@ -1,11 +1,9 @@
 type ApiError = { message?: string };
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') ?? '';
-
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(path, {
       ...init,
       headers: { Accept: 'application/json', ...init?.headers },
     });
