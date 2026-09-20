@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { createItinerary, getItinerary, searchPlaces } from './api';
+import { createItinerary, searchPlaces } from './api';
 import type { Itinerary, Place, PlaceSearchResult } from './api';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
@@ -29,6 +29,9 @@ const PREFERENCES = [
   { value: 'SCIENCE', label: '과학' },
   { value: 'CULTURE', label: '문화' },
 ];
+function toLocalDateTime(value: string) {
+  return value.length === 16 ? value + ':00' : value;
+}
 
 function PreferenceIcon({ value }: { value: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -159,24 +162,18 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       }));
     setSaving(true);
     try {
-      const created = await createItinerary({
+      const itinerary = await createItinerary({
         gameId: game.gameId,
         arrivalPlace: journey.arrivalPlace.trim(),
-        arrivalAt: journey.arrivalAt.length === 16 ? journey.arrivalAt + ':00' : journey.arrivalAt,
+        arrivalAt: toLocalDateTime(journey.arrivalAt),
         departurePlace: journey.departurePlace.trim(),
-        departureAt: journey.departureAt.length === 16 ? journey.departureAt + ':00' : journey.departureAt,
+        departureAt: toLocalDateTime(journey.departureAt),
         preferences,
         places: itineraryPlaces,
       });
-      let detail = created;
-      try {
-        detail = await getItinerary(created.id);
-      } catch {
-        // 생성 응답도 상세 데이터이므로 저장 후 상세 재조회가 실패하면 응답을 표시합니다.
-      }
-      onSaved(detail);
+      onSaved(itinerary);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '일정을 저장하지 못했습니다.');
+      setError(cause instanceof Error ? cause.message : '원정 일정을 저장하지 못했습니다.');
     } finally {
       setSaving(false);
     }
@@ -217,7 +214,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
         </section>
 
         <section className="form-section">
-          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>카카오맵에서 찾거나 직접 입력해 일정에 담아둘 수 있어요.</p></div></div>
+          <div className="form-heading"><b>03</b><div><h2>가보고 싶은 장소</h2><p>추가한 순서대로 일정의 루틴에 저장돼요.</p></div></div>
           {!places.length && (
             <div className="places-empty-state">
               <p>카카오맵에서 장소를 찾아 원정 일정에 추가해 보세요.</p>
