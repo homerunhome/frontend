@@ -4,8 +4,14 @@ import { CoursePanel } from './course-edit/CoursePanel';
 import { ExplorePanel } from './course-edit/ExplorePanel';
 import { initialCourse, placeCandidates } from './course-edit/mockData';
 import type { CoursePlace, PanelMode } from './course-edit/types';
+import { ItineraryOverview } from './itinerary/ItineraryOverview';
 
-export default function App() {
+function closeEditorWindow() {
+  window.setTimeout(() => window.location.assign('/'), 100);
+  window.close();
+}
+
+export function CourseEditPage() {
   const [course, setCourse] = useState<CoursePlace[]>(initialCourse);
   const [selectedPlaceId, setSelectedPlaceId] = useState(initialCourse[1]?.id ?? '');
   const [panelMode, setPanelMode] = useState<PanelMode>('course');
@@ -78,7 +84,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="topbar__lead">
-          <button className="text-button text-button--back" type="button" aria-label="이전 화면으로 돌아가기">
+          <button className="text-button text-button--back" type="button" aria-label="편집 창 닫기" onClick={closeEditorWindow}>
             <span aria-hidden="true">←</span>
             내 원정
           </button>
@@ -88,7 +94,7 @@ export default function App() {
           </div>
         </div>
         <div className="topbar__actions">
-          <button className="button button--secondary" type="button" onClick={() => setNotice('수정 내용을 취소했어요.')}>취소</button>
+          <button className="button button--secondary" type="button" onClick={closeEditorWindow}>취소</button>
           <button className="button button--primary" type="button" onClick={saveCourse}>변경 저장</button>
         </div>
       </header>
@@ -166,4 +172,9 @@ export default function App() {
       )}
     </div>
   );
+}
+
+export default function App() {
+  const isCourseEditor = window.location.pathname.startsWith('/course/edit');
+  return isCourseEditor ? <CourseEditPage /> : <ItineraryOverview />;
 }
