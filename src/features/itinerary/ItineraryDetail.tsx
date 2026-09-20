@@ -209,18 +209,13 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
             activePlaceKey={activePlaceKey}
             onSelectPlace={setActivePlaceKey}
           />
-          <div className="detail-map-caption">
-            <span>AWAY GAME · {String(itinerary.id).padStart(4, '0')}</span>
-            <strong>{itinerary.homeTeam} <small>VS</small> {itinerary.awayTeam}</strong>
-            <time>{dateLabel(itinerary.gameDate)} · {timeLabel(itinerary.gameStartTime)}</time>
-          </div>
         </div>
         <aside className="routine-sidebar" aria-label={editing ? '코스 수정' : '일정 상세'}>
           {editing ? (
             <form className="detail-editor" onSubmit={savePlaces}>
-              <div className="detail-ticket-heading">
-                <div><span className="detail-ticket-kicker">ROUTE EDIT · #{String(itinerary.id).padStart(4, '0')}</span><h1>코스 수정</h1></div>
-                <button className="schedule-dialog-close" type="button" aria-label="수정 취소" onClick={() => setEditing(false)}>×</button>
+              <div className="detail-editor-header">
+                <div><h1>코스 수정</h1><p>{itinerary.stadium} · {dateLabel(itinerary.gameDate)}</p></div>
+                <button className="button button-secondary" type="button" onClick={() => setEditing(false)}>취소</button>
               </div>
               <label className="field detail-mode-field"><span>이동수단</span>
                 <select value={travelMode} onChange={(event) => setTravelMode(event.target.value as TravelMode)}>
@@ -249,9 +244,9 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
                     <label className="field detail-address-field"><span>주소</span><input value={place.address} placeholder="검색하거나 주소 입력" onChange={(event) => setDraftPlaces((current) => current.map((item) => item.key === place.key ? { ...item, address: event.target.value, placeId: null, latitude: null, longitude: null } : item))} /></label>
                   </div>
                   <div className="detail-editor-actions">
-                    <button type="button" aria-label={`${index + 1}번째 장소 위로`} disabled={index === 0} onClick={() => movePlace(index, -1)}>↑</button>
-                    <button type="button" aria-label={`${index + 1}번째 장소 아래로`} disabled={index === draftPlaces.length - 1} onClick={() => movePlace(index, 1)}>↓</button>
-                    <button type="button" aria-label={`${place.name} 삭제`} onClick={() => setDraftPlaces((current) => current.filter((item) => item.key !== place.key))}>×</button>
+                    <button type="button" aria-label={(index + 1) + '번째 장소 위로'} disabled={index === 0} onClick={() => movePlace(index, -1)}>↑</button>
+                    <button type="button" aria-label={(index + 1) + '번째 장소 아래로'} disabled={index === draftPlaces.length - 1} onClick={() => movePlace(index, 1)}>↓</button>
+                    <button type="button" aria-label={place.name + ' 삭제'} onClick={() => setDraftPlaces((current) => current.filter((item) => item.key !== place.key))}>×</button>
                   </div>
                 </li>)}
               </ol>
@@ -263,37 +258,19 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
             </form>
           ) : (
             <>
-              <div className="detail-ticket-heading">
-                <div><span className="detail-ticket-kicker">TICKET · {String(itinerary.id).padStart(4, '0')}</span><h1>{itinerary.stadium} 일정</h1></div>
-                <span className="detail-status">{statusLabel(itinerary.status, planCalculated)}</span>
-              </div>
-              <p className="detail-game-date">{dateLabel(itinerary.gameDate)} · {timeLabel(itinerary.gameStartTime)} 경기</p>
-              <div className="detail-route-strip" aria-label="방문 경로">
-                <span>{itinerary.arrivalPlace}</span>
-                {itinerary.places.map((place, index) => <span key={`${place.placeId}-${index}`}>{place.name}</span>)}
-                <span>{itinerary.stadium}</span>
-              </div>
-              <div className="detail-metrics">
-                <div><small>대전 도착</small><strong>{timeLabel(itinerary.arrivalAt)}</strong></div>
-                <div><small>구장 도착</small><strong>{timeLabel(itinerary.stadiumArrivalAt)}</strong></div>
-                <div><small>경기 시작</small><strong className="detail-accent-time">{timeLabel(itinerary.gameDate + 'T' + itinerary.gameStartTime)}</strong></div>
-              </div>
-              <div className="detail-plan-status">
-                  <div className="detail-plan-copy"><strong>{statusLabel(itinerary.status, planCalculated)}</strong>
-                  <span>{itinerary.gameStartSlackMinutes == null ? '코스 수정에서 이동시간을 계산해 주세요.' : `경기 시작까지 ${itinerary.gameStartSlackMinutes}분`}</span>
+              <header className="detail-overview">
+                <div className="detail-overview-heading">
+                  <div>
+                    <h1>{itinerary.homeTeam} vs {itinerary.awayTeam}</h1>
+                    <p>{itinerary.stadium} · {dateLabel(itinerary.gameDate)} · {timeLabel(itinerary.gameStartTime)}</p>
+                  </div>
+                  <button className="button button-primary detail-edit-button" type="button" onClick={beginEditing}>코스 수정</button>
                 </div>
-                <div className="detail-barcode" aria-hidden="true" />
-                <small>NO. {String(itinerary.id).padStart(4, '0')}</small>
-                <button className="button button-primary detail-edit-button" type="button" onClick={beginEditing}>코스 수정</button>
-              </div>
-              {itinerary.warnings?.length > 0 && <ul className="detail-warning-list" aria-label="일정 경고">
-                {itinerary.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-              </ul>}
-              <div className="detail-train-summary">
-                <div><small>왕편</small><strong>{itinerary.arrivalTrain ? `${itinerary.arrivalTrain.trainType} ${itinerary.arrivalTrain.trainNumber} · ${itinerary.arrivalTrain.departureStation} ${timeLabel(itinerary.arrivalTrain.departureAt)} → ${itinerary.arrivalTrain.arrivalStation} ${timeLabel(itinerary.arrivalTrain.arrivalAt)}` : '직접 입력'}</strong></div>
-                <div><small>귀가편</small><strong>{itinerary.returnTrain ? `${itinerary.returnTrain.trainType} ${itinerary.returnTrain.trainNumber} · ${itinerary.returnTrain.departureStation} ${timeLabel(itinerary.returnTrain.departureAt)} → ${itinerary.returnTrain.arrivalStation} ${timeLabel(itinerary.returnTrain.arrivalAt)}` : '직접 입력'}</strong></div>
-                <p>{itinerary.returnTransportBoardable === null ? '' : itinerary.returnTransportBoardable ? '예상 경기 종료 후 귀가편 탑승 여유가 있습니다.' : '예상 경기 종료 후 귀가편 탑승이 어려울 수 있습니다.'}</p>
-              </div>
+                <div className="detail-summary-status">
+                  <span className="detail-status-badge">{statusLabel(itinerary.status, planCalculated)}</span>
+                  {itinerary.gameStartSlackMinutes !== null && <span>경기 시작까지 {itinerary.gameStartSlackMinutes}분</span>}
+                </div>
+              </header>
               <div className="routine-sidebar-heading"><strong>방문 순서</strong><span>{itinerary.places.length}곳</span></div>
               {!itinerary.places.length && <p className="routine-list-empty">아직 장소를 추가하지 않았어요.</p>}
               <ol className="routine-place-list detail-routine-list">
@@ -304,14 +281,34 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated }: Props
                     <li key={key}>
                       <button className={'detail-routine-item' + (active ? ' is-active' : '')} type="button" aria-pressed={active} onClick={() => setActivePlaceKey(key)}>
                         <span className="routine-place-order">{String(index + 1).padStart(2, '0')}</span>
-                        <span className="detail-routine-place-info"><strong>{place.name}</strong><small>{place.address || '주소 미입력'} · {timeLabel(place.arrivesAt)} 도착 · {place.stayDurationMinutes ?? 0}분</small></span>
+                        <span className="detail-routine-place-info">
+                          <strong>{place.name}</strong>
+                          <small>{(place.address || '주소 미입력') + ' · ' + timeLabel(place.arrivesAt) + ' 도착 · ' + (place.stayDurationMinutes ?? 0) + '분 체류'}</small>
+                        </span>
                         <span className="detail-leg-time">{place.travelFromPreviousMinutes ?? 0}분</span>
                       </button>
                     </li>
                   );
                 })}
               </ol>
-              {itinerary.stadiumDepartureRecommendedAt && <p className="detail-return-time">경기장 출발 권장 {timeLabel(itinerary.stadiumDepartureRecommendedAt)}</p>}
+              {itinerary.returnTransportBoardable === false && <p className="detail-return-alert">예상 경기 종료 후 귀가편 탑승이 어려울 수 있습니다.</p>}
+              {itinerary.returnTransportBoardable === true && <p className="detail-return-alert is-clear">예상 경기 종료 후 귀가편 탑승 여유가 있습니다.</p>}
+              <details className="detail-extra">
+                <summary>경기 시간과 교통편</summary>
+                <dl className="detail-plan-times" aria-label="일정 시간">
+                  <div><dt>대전 도착</dt><dd>{timeLabel(itinerary.arrivalAt)}</dd></div>
+                  <div><dt>구장 도착</dt><dd>{timeLabel(itinerary.stadiumArrivalAt)}</dd></div>
+                  <div><dt>경기 시작</dt><dd>{timeLabel(itinerary.gameDate + 'T' + itinerary.gameStartTime)}</dd></div>
+                </dl>
+                <div className="detail-train-summary">
+                  <div><small>왕편</small><strong>{itinerary.arrivalTrain ? itinerary.arrivalTrain.trainType + ' ' + itinerary.arrivalTrain.trainNumber + ' · ' + itinerary.arrivalTrain.departureStation + ' ' + timeLabel(itinerary.arrivalTrain.departureAt) + ' → ' + itinerary.arrivalTrain.arrivalStation + ' ' + timeLabel(itinerary.arrivalTrain.arrivalAt) : '직접 입력'}</strong></div>
+                  <div><small>귀가편</small><strong>{itinerary.returnTrain ? itinerary.returnTrain.trainType + ' ' + itinerary.returnTrain.trainNumber + ' · ' + itinerary.returnTrain.departureStation + ' ' + timeLabel(itinerary.returnTrain.departureAt) + ' → ' + itinerary.returnTrain.arrivalStation + ' ' + timeLabel(itinerary.returnTrain.arrivalAt) : '직접 입력'}</strong></div>
+                </div>
+                {itinerary.warnings?.length > 0 && <ul className="detail-warning-list" aria-label="일정 경고">
+                  {itinerary.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>}
+                {itinerary.stadiumDepartureRecommendedAt && <p className="detail-return-time">경기장 출발 권장 <strong>{timeLabel(itinerary.stadiumDepartureRecommendedAt)}</strong></p>}
+              </details>
             </>
           )}
         </aside>

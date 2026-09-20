@@ -198,7 +198,7 @@ export function ItineraryMapPreview({ places, activePlaceKey, onSelectPlace }: P
       route = new sdk.maps.Polyline({
         map,
         path: coordinates,
-        strokeColor: '#03E2FF',
+        strokeColor: '#079171',
         strokeOpacity: 0.85,
         strokeWeight: 3,
       });
