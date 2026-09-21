@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ItineraryDetail } from './ItineraryDetail';
 import { getItinerary } from './api';
 import type { Itinerary } from './api';
+import { CourseEditPage } from '../../course-edit/CourseEditPage';
 
 type Props = {
   itineraryId: number;
@@ -71,7 +72,7 @@ function ItineraryRoute({ itineraryId, initialEditing = false }: Props) {
 }
 
 export function CourseEditorRoute({ itineraryId }: Props) {
-  return <ItineraryRoute itineraryId={itineraryId} initialEditing />;
+  return <CourseEditPage itineraryId={itineraryId} />;
 }
 
 export function ItineraryDetailRoute({ itineraryId }: Props) {

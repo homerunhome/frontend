@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getCoursePlaceCandidates } from '../api/client';
-import type { CandidateCategory, CoursePlaceCandidate, DaejeonHotspot, ExploreScope, ItineraryResponse } from '../api/types';
+import { getCoursePlaceCandidates, getTourismContentDetail } from '../api/client';
+import type { CandidateCategory, Coordinate, CoursePlaceCandidate, DaejeonHotspot, ExploreScope, ItineraryResponse, TourismContentDetail } from '../api/types';
 import type { CoursePlace } from './types';
 
 type ExplorePanelProps = {
@@ -23,8 +23,12 @@ const scopes: Array<{ label: string; value: ExploreScope; hotspot?: DaejeonHotsp
   { label: '현재 코스 주변', value: 'COURSE_NEARBY' },
   { label: '야구장 주변', value: 'STADIUM_NEARBY' },
   { label: '대전역 주변', value: 'STATION_NEARBY' },
+  { label: '현재 위치', value: 'CURRENT_LOCATION' },
   { label: '은행동·대흥동', value: 'DAEJEON_HOTSPOT', hotspot: 'EUNHAENG_DAEHEUNG' },
   { label: '소제동', value: 'DAEJEON_HOTSPOT', hotspot: 'SOJE_DONG' },
+  { label: '둔산동', value: 'DAEJEON_HOTSPOT', hotspot: 'DUNSAN_DONG' },
+  { label: '엑스포·한밭수목원', value: 'DAEJEON_HOTSPOT', hotspot: 'EXPO' },
+  { label: '유성온천', value: 'DAEJEON_HOTSPOT', hotspot: 'YUSEONG' },
 ];
 
 export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePanelProps) {
@@ -39,16 +43,27 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
   const [candidates, setCandidates] = useState<CoursePlaceCandidate[]>([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
+  const [detail, setDetail] = useState<TourismContentDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
   const selectedScope = scopes[scopeIndex] ?? scopes[1]!;
 
   const search = useCallback((signal?: AbortSignal) => {
     setIsLoading(true);
     setError('');
+    if (selectedScope.value === 'CURRENT_LOCATION' && !currentLocation) {
+      setCandidates([]);
+      setError('현재 위치를 확인한 뒤 주변 장소를 조회할 수 있어요.');
+      setIsLoading(false);
+      return Promise.resolve();
+    }
     const request = {
       scope: selectedScope.value,
       categories: [category],
       ...(selectedScope.value === 'COURSE_NEARBY' ? { coursePoints } : {}),
       ...(selectedScope.hotspot ? { hotspot: selectedScope.hotspot } : {}),
+      ...(selectedScope.value === 'CURRENT_LOCATION' && currentLocation ? { center: currentLocation } : {}),
       ...(submittedQuery.trim() ? { keyword: submittedQuery.trim() } : {}),
       ...(category === 'FESTIVAL_EVENT' ? { eventDate: itinerary.gameDate } : {}),
       limit: 15,
@@ -63,7 +78,7 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
       .finally(() => {
         if (!signal?.aborted) setIsLoading(false);
       });
-  }, [category, coursePoints, itinerary.gameDate, selectedScope, submittedQuery]);
+  }, [category, coursePoints, currentLocation, itinerary.gameDate, selectedScope, submittedQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -72,6 +87,70 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
   }, [search]);
 
   const coursePlaceIds = useMemo(() => new Set(coursePlaces.map((place) => place.id)), [coursePlaces]);
+
+  function selectScope(index: number) {
+    const nextScope = scopes[index];
+    if (nextScope?.value !== 'CURRENT_LOCATION') {
+      setScopeIndex(index);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setError('이 브라우저에서는 현재 위치를 사용할 수 없습니다.');
+      return;
+    }
+    setIsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCurrentLocation({ latitude: coords.latitude, longitude: coords.longitude });
+        setScopeIndex(index);
+      },
+      () => {
+        setIsLoading(false);
+        setError('현재 위치 권한을 확인해 주세요.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }
+
+  async function openTourismDetail(contentId: string) {
+    setDetailLoading(true);
+    setDetailError('');
+    try {
+      setDetail(await getTourismContentDetail(contentId));
+    } catch (requestError) {
+      setDetailError(requestError instanceof Error ? requestError.message : '관광 정보를 불러오지 못했습니다.');
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  if (detail) {
+    const usageItems = [
+      ['이용 시간', detail.usageInformation?.useTime],
+      ['휴무일', detail.usageInformation?.restDate],
+      ['이용 요금', detail.usageInformation?.useFee],
+      ['주차', detail.usageInformation?.parking],
+      ['권장 체류', detail.usageInformation?.duration],
+    ].filter((item): item is [string, string] => Boolean(item[1]));
+    const accessItems = [
+      ['장애인 주차', detail.accessibility?.parking],
+      ['휠체어', detail.accessibility?.wheelchair],
+      ['장애인 화장실', detail.accessibility?.restroom],
+      ['유모차', detail.accessibility?.stroller],
+      ['수유실', detail.accessibility?.lactationRoom],
+    ].filter((item): item is [string, string] => Boolean(item[1]));
+    return (
+      <div className="panel-content tourism-detail">
+        <button className="text-button text-button--back" type="button" onClick={() => setDetail(null)}><span aria-hidden="true">←</span>장소 목록</button>
+        {detail.imageUrl && <img className="tourism-detail__hero" src={detail.imageUrl} alt={detail.title} />}
+        <div className="tourism-detail__heading"><span>한국관광공사 관광정보</span><h1>{detail.title}</h1><p>{[detail.address, detail.addressDetail].filter(Boolean).join(' ')}</p></div>
+        {detail.overview && <p className="tourism-detail__overview">{detail.overview}</p>}
+        {usageItems.length > 0 && <section><h2>이용 안내</h2><dl>{usageItems.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
+        {accessItems.length > 0 && <section><h2>편의 정보</h2><dl>{accessItems.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
+        {detail.phone && <p className="tourism-detail__contact">문의 {detail.phone}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="panel-content explore-panel">
@@ -89,7 +168,7 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
         <legend>검색 위치</legend>
         <div className="chip-list">
           {scopes.map((item, index) => (
-            <button key={`${item.value}-${item.hotspot ?? ''}`} className={scopeIndex === index ? 'filter-chip is-active' : 'filter-chip'} type="button" disabled={item.value === 'COURSE_NEARBY' && coursePoints.length === 0} onClick={() => setScopeIndex(index)}>{item.label}</button>
+            <button key={`${item.value}-${item.hotspot ?? ''}`} className={scopeIndex === index ? 'filter-chip is-active' : 'filter-chip'} type="button" disabled={item.value === 'COURSE_NEARBY' && coursePoints.length === 0} onClick={() => selectScope(index)}>{item.label}</button>
           ))}
         </div>
       </fieldset>
@@ -102,6 +181,8 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
       </fieldset>
 
       <div className="result-summary"><span>{selectedScope.label}</span><strong>{isLoading ? '조회 중' : `${candidates.length}곳`}</strong></div>
+
+      {detailError && <div className="inline-alert" role="alert"><strong>관광 상세 정보를 불러오지 못했어요.</strong><span>{detailError}</span></div>}
 
       {isLoading ? (
         <div className="result-list" aria-label="장소 검색 중">{[1, 2, 3].map((item) => <div className="result-skeleton" key={item} />)}</div>
@@ -120,7 +201,10 @@ export function ExplorePanel({ itinerary, coursePlaces, onAddPlace }: ExplorePan
                   {place.imageUrl ? <img src={place.imageUrl} alt="" loading="lazy" /> : <span>{place.name.slice(0, 1)}</span>}
                 </div>
                 <div className="result-copy"><span>{place.provider === 'TOUR_API' ? '한국관광공사' : '카카오'}{place.distanceMeters !== null ? ` · ${place.distanceMeters}m` : ''}</span><strong>{place.name}</strong><p>{place.address || '주소 정보 없음'}</p></div>
-                <button className={isAdded ? 'add-button is-added' : 'add-button'} type="button" disabled={isAdded} onClick={() => onAddPlace(place)}>{isAdded ? '추가됨' : '추가'}</button>
+                <div className="result-actions">
+                  {place.provider === 'TOUR_API' && <button className="detail-button" type="button" disabled={detailLoading} onClick={() => void openTourismDetail(place.externalId)}>상세</button>}
+                  <button className={isAdded ? 'add-button is-added' : 'add-button'} type="button" disabled={isAdded} onClick={() => onAddPlace(place)}>{isAdded ? '추가됨' : '추가'}</button>
+                </div>
               </li>
             );
           })}
