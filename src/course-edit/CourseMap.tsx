@@ -75,7 +75,7 @@ export function CourseMap({ places, selectedPlaceId, onSelectPlace }: CourseMapP
           route = new maps.Polyline({
             map,
             path,
-            strokeColor: '#e85f2b',
+            strokeColor: '#27cbb3',
             strokeOpacity: 0.9,
             strokeStyle: 'shortdash',
             strokeWeight: 5,
