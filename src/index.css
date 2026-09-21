@@ -867,6 +867,8 @@ body { caret-color: var(--orange); }
 .detail-routine-item { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 8px; padding: 10px 8px; border: 1px solid #e4e7e4; border-radius: 11px; color: var(--ink); background: #fff; cursor: pointer; text-align: left; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease; }
 .detail-routine-item:hover, .detail-routine-item.is-active { border-color: #8bb7a4; background: #f7fbf7; box-shadow: 0 0 0 2px rgba(22, 133, 110, .08); }
 .detail-routine-item:focus-visible { outline: 2px solid #217cf9; outline-offset: 2px; }
+.detail-routine-boundary { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 10px 8px; border: 1px solid #e4e7e4; border-radius: 8px; background: #f8faf8; }
+.detail-routine-boundary.is-stadium { border-color: #c8ddd1; background: #f1f7f2; }
 .detail-routine-place-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .detail-routine-place-info strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .detail-routine-place-info small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -970,6 +972,8 @@ body { caret-color: var(--orange); }
 .app-shell-detail .detail-routine-item:hover,
 .app-shell-detail .detail-routine-item.is-active { border-color: #8bb7a4; background: #f7fbf7; box-shadow: 0 0 0 2px rgba(22, 133, 110, .08); }
 .app-shell-detail .detail-routine-item:focus-visible { outline-color: #217cf9; }
+.app-shell-detail .detail-routine-boundary .routine-place-order { color: #1c745f; background: #eaf4ed; }
+.app-shell-detail .detail-routine-boundary.is-stadium .routine-place-order { color: #fff; background: #16856e; }
 .app-shell-detail .detail-routine-place-info strong { color: var(--ink); font-size: 12px; }
 .app-shell-detail .detail-routine-place-info small { color: var(--muted); font-size: 10px; line-height: 1.45; }
 .detail-leg-time { color: #1c745f; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -993,6 +997,23 @@ body { caret-color: var(--orange); }
 .detail-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #e7e9e6; }
 .detail-editor-header h1 { margin: 0; font-size: 20px; }
 .detail-editor-header p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.detail-edit-section { display: grid; gap: 10px; padding-bottom: 13px; border-bottom: 1px solid #e7e9e6; }
+.detail-edit-section-heading { display: grid; gap: 3px; }
+.detail-edit-section-heading strong { color: var(--ink); font-size: 12px; }
+.detail-edit-section-heading small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.detail-journey-edit-grid,
+.detail-train-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.detail-train-editors { display: grid; gap: 10px; }
+.detail-train-editor { display: grid; gap: 8px; padding: 9px; border: 1px solid #e4e7e4; border-radius: 8px; background: #fbfcfb; }
+.detail-train-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.detail-train-editor-heading strong { color: var(--ink); font-size: 11px; }
+.app-shell-detail .detail-train-editor-heading .button { min-height: 30px; padding: 0 8px; font-size: 10px; }
+.detail-train-empty { margin: 0; color: var(--muted); font-size: 10px; }
+.detail-train-edit-grid .field input { min-width: 0; font-size: 11px; }
+.detail-preference-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-preference-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 9px; border: 1px solid #dfe4df; border-radius: 999px; color: var(--ink); background: #fff; font: inherit; font-size: 11px; cursor: pointer; }
+.detail-preference-chip.is-selected { border-color: #88ad96; color: #176b56; background: #f2f7f2; }
+.detail-preference-chip i { font-size: 12px; font-style: normal; font-weight: 700; }
 .app-shell-detail .field { color: var(--ink); }
 .app-shell-detail .field > span:first-child { color: var(--muted); }
 .app-shell-detail .field input,
@@ -1026,4 +1047,6 @@ body { caret-color: var(--orange); }
   .detail-overview p { font-size: 10px; }
   .app-shell-detail .detail-edit-button { min-height: 34px; padding: 0 8px; font-size: 11px; }
   .app-shell-detail .routine-sidebar { padding-right: 9px; padding-left: 9px; }
+  .detail-journey-edit-grid,
+  .detail-train-edit-grid { grid-template-columns: minmax(0, 1fr); }
 }

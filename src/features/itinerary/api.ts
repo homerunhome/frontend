@@ -140,6 +140,24 @@ export type EditItineraryPlacesRequest = {
   places: (ItineraryCandidate & { travelFromPreviousMinutes: number })[];
 };
 
+export type EditItineraryPlanRequest = {
+  arrivalPlace: string;
+  arrivalAt: string;
+  arrivalTrain: ItineraryTrain | null;
+  departurePlace: string;
+  departureAt: string;
+  returnTrain: ItineraryTrain | null;
+  preferences: string[];
+  stadiumEntryBufferMinutes: number;
+  finalLegToStadiumMinutes: number;
+  stadiumToDepartureMinutes: number;
+  postGameCrowdBufferMinutes: number;
+  boardingBufferMinutes: number;
+  travelMode: TravelMode;
+  expectedGameDurationMinutes: number;
+  places: (ItineraryCandidate & { travelFromPreviousMinutes: number })[];
+};
+
 export type Itinerary = {
   id: number;
   gameId: string;
@@ -188,6 +206,14 @@ export function generateItinerary(body: GenerateItineraryRequest): Promise<Itine
 
 export function updateItineraryPlaces(id: number, body: EditItineraryPlacesRequest): Promise<Itinerary> {
   return request<Itinerary>(`/api/itineraries/${id}/places`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateItineraryPlan(id: number, body: EditItineraryPlanRequest): Promise<Itinerary> {
+  return request<Itinerary>(`/api/itineraries/${id}/plan`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
