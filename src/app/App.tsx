@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GameSelection } from '../features/games/GameSelection';
 import type { Game } from '../features/games/api';
 import { ItineraryDetail } from '../features/itinerary/ItineraryDetail';
+import { CourseEditorRoute, ItineraryDetailRoute } from '../features/itinerary/CourseEditorRoute';
 import { ItineraryPlanner } from '../features/itinerary/ItineraryPlanner';
 import { SavedItineraries } from '../features/itinerary/SavedItineraries';
 import { getItinerary } from '../features/itinerary/api';
@@ -10,7 +11,7 @@ import { loadItineraryIds, rememberItineraryId } from '../features/itinerary/sto
 
 type Screen = 'games' | 'planner' | 'saved' | 'detail';
 
-export default function App() {
+function MainApp() {
   const [screen, setScreen] = useState<Screen>('games');
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
@@ -36,6 +37,15 @@ export default function App() {
 
     return () => { active = false; };
   }, [savedIds]);
+
+  useEffect(() => {
+    if (screen !== 'detail' || !itinerary) return;
+    const refresh = () => {
+      void getItinerary(itinerary.id).then(setItinerary).catch(() => undefined);
+    };
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [itinerary?.id, screen]);
 
   function openDetail(result: Itinerary, fromSaved: boolean) {
     setItinerary(result);
@@ -72,4 +82,12 @@ export default function App() {
       <footer className="site-footer"><span>경기장에서 시작되는 대전의 하루</span><span>YOUR GAME. YOUR DAY.</span></footer>
     </div>
   );
+}
+
+export default function App() {
+  const editorMatch = window.location.pathname.match(/^\/itineraries\/(\d+)\/course\/edit\/?$/);
+  if (editorMatch?.[1]) return <CourseEditorRoute itineraryId={Number(editorMatch[1])} />;
+  const detailMatch = window.location.pathname.match(/^\/itineraries\/(\d+)\/?$/);
+  if (detailMatch?.[1]) return <ItineraryDetailRoute itineraryId={Number(detailMatch[1])} />;
+  return <MainApp />;
 }

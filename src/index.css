@@ -849,7 +849,7 @@ body { caret-color: var(--orange); }
 .app-shell-detail .site-footer { display: none; }
 .app-shell-detail .detail-page { position: relative; width: 100%; height: 100%; max-width: none; margin: 0; padding: 0; }
 .app-shell-detail .detail-page > .back-link { position: absolute; z-index: 5; top: 14px; left: 16px; min-height: 38px; padding: 0 12px; border: 1px solid rgba(26, 28, 32, .12); border-radius: 9px; color: var(--ink); background: rgba(255, 255, 255, .94); box-shadow: 0 2px 8px rgba(26, 28, 32, .12); }
-.app-shell-detail .detail-routine-workspace { width: 100%; height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); gap: 0; }
+.app-shell-detail .detail-routine-workspace { width: 100%; height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(450px, 510px); gap: 0; }
 .routine-map-card { min-width: 0; min-height: 0; display: flex; overflow: hidden; border: 0; border-radius: 0; background: #f1f5f0; }
 .routine-map-canvas { position: relative; min-width: 0; min-height: 0; flex: 1; overflow: hidden; background: #f1f5f0; }
 .kakao-map-surface { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -908,9 +908,10 @@ body { caret-color: var(--orange); }
   box-shadow: 0 2px 8px rgba(26, 28, 32, .12);
 }
 .app-shell-detail .detail-routine-workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-columns: minmax(0, 1fr) minmax(450px, 510px);
 }
 .detail-map-pane { min-width: 0; min-height: 0; overflow: hidden; background: #f1f5f0; }
+.detail-map-pane .routine-map-card { width: 100%; height: 100%; }
 .detail-map-pane .routine-map-card,
 .detail-map-pane .routine-map-canvas { background: #f1f5f0; }
 .detail-map-pane .routine-map-state {

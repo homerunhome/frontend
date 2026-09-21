@@ -4,6 +4,14 @@
     {
       "source": "/api/:path*",
       "destination": "http://home-run-home.duckdns.org:8080/api/:path*"
+    },
+    {
+      "source": "/itineraries/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/course/:path*",
+      "destination": "/index.html"
     }
   ]
 }
