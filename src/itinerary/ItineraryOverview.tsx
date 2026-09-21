@@ -29,7 +29,7 @@ export function ItineraryOverview({ itineraryId }: { itineraryId: number }) {
       <main className="overview-main" id="schedule">
         <div className="overview-title">
           <div><span>다가오는 원정</span><h1>{itinerary.stadium} 원정</h1><p>{formatDate(itinerary.gameDate)} · {itinerary.homeTeam} vs {itinerary.awayTeam}</p></div>
-          <a className="button button--primary overview-edit" href={editUrl} target="_blank" rel="noopener noreferrer">코스 수정</a>
+          <a className="button button--primary overview-edit" href={editUrl}>코스 수정</a>
         </div>
 
         <section className="overview-grid" aria-label="원정 일정 요약">
@@ -53,7 +53,7 @@ export function ItineraryOverview({ itineraryId }: { itineraryId: number }) {
         <section className="overview-course" id="course" aria-labelledby="course-title">
           <div className="overview-section-heading">
             <div><h2 id="course-title">저장된 코스</h2><p>일정 API에 저장된 장소를 순서대로 표시합니다.</p></div>
-            <a className="button button--secondary" href={editUrl} target="_blank" rel="noopener noreferrer">수정</a>
+            <a className="button button--secondary" href={editUrl}>수정</a>
           </div>
           {itinerary.places.length === 0 ? (
             <div className="empty-state"><strong>저장된 장소가 없어요.</strong><p>코스 수정 화면에서 장소를 검색해 추가할 수 있습니다.</p></div>
