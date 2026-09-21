@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { generateItinerary, getTravelMinutes, searchPlaces } from './api';
-import type { Itinerary, PlaceSearchResult, TravelMode } from './api';
-import { collectOptimizedTravelTimes, resolveNamedLocation, resolvePlaceCandidates } from './routePlanning';
+import { generateItinerary, getCoursePlaceCandidates, getTravelMinutes, searchPlaces } from './api';
+import type { CoursePlaceCandidate, CoursePlaceCandidateRequest, Itinerary, ItineraryRouteTime, PlaceSearchResult, TravelMode } from './api';
+import { collectOptimizedTravelTimes, resolveNamedLocation, resolvePlaceCandidates, selectFittingPlaces } from './routePlanning';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
 import type { Game } from '../games/api';
@@ -34,6 +34,76 @@ const PREFERENCES = [
 
 function toLocalDateTime(value: string) {
   return value.length === 16 ? `${value}:00` : value;
+}
+
+function recommendationRequest(
+  preference: string,
+  arrivalCoordinate: { latitude: number; longitude: number },
+  city: string,
+): CoursePlaceCandidateRequest {
+  const isDaejeon = city.includes('대전');
+  const nearby = (categories: CoursePlaceCandidateRequest['categories'], keyword?: string): CoursePlaceCandidateRequest => ({
+    scope: 'CURRENT_LOCATION',
+    categories,
+    center: arrivalCoordinate,
+    maxDistanceMeters: 10_000,
+    limit: 8,
+    ...(keyword ? { keyword } : {}),
+  });
+
+  switch (preference) {
+    case 'BREAD': return nearby(['FOOD'], '빵집');
+    case 'LOCAL_FOOD': return nearby(['FOOD']);
+    case 'CAFE': return nearby(['CAFE']);
+    case 'DOWNTOWN':
+      return isDaejeon
+        ? { scope: 'DAEJEON_HOTSPOT', hotspot: 'EUNHAENG_DAEHEUNG', categories: ['FOOD', 'CAFE', 'ACTIVITY'], limit: 8 }
+        : nearby(['ACTIVITY']);
+    case 'SCIENCE':
+      return isDaejeon
+        ? { scope: 'DAEJEON_HOTSPOT', hotspot: 'EXPO', categories: ['TOURIST_ATTRACTION', 'CULTURAL_FACILITY'], limit: 8 }
+        : nearby(['TOURIST_ATTRACTION', 'CULTURAL_FACILITY'], '과학');
+    case 'CULTURE': return nearby(['CULTURAL_FACILITY', 'TOURIST_ATTRACTION']);
+    default: throw new Error('선택한 성향을 장소 검색 조건으로 바꾸지 못했습니다.');
+  }
+}
+
+function shortlistRecommendations(
+  groups: { preference: string; places: CoursePlaceCandidate[] }[],
+  limit: number,
+  manualPlaces: { placeId: string }[],
+) {
+  const selected: CoursePlaceCandidate[] = [];
+  const seen = new Set<string>();
+  const manualIds = new Set(manualPlaces.map((place) => place.placeId));
+  const add = (place: CoursePlaceCandidate) => {
+    const key = `${place.provider}:${place.externalId}`;
+    if (selected.length >= limit || seen.has(key)) return;
+    if (place.provider === 'KAKAO' && manualIds.has(place.externalId)) return;
+    seen.add(key);
+    selected.push(place);
+  };
+
+  for (const group of groups) {
+    const match = group.places.find((place) => (
+      !seen.has(`${place.provider}:${place.externalId}`)
+      && !(place.provider === 'KAKAO' && manualIds.has(place.externalId))
+    ));
+    if (match) add(match);
+  }
+
+  groups.flatMap((group) => group.places)
+    .sort((left, right) => (left.distanceMeters ?? Number.MAX_SAFE_INTEGER) - (right.distanceMeters ?? Number.MAX_SAFE_INTEGER))
+    .forEach(add);
+  return selected;
+}
+
+function routeTimesForPlaces(routeTimes: ItineraryRouteTime[], places: { placeId: string }[]): ItineraryRouteTime[] {
+  const ids = new Set(places.map((place) => place.placeId));
+  return routeTimes.filter((leg) => (
+    (leg.fromPlaceId === 'ARRIVAL' && ids.has(leg.toPlaceId))
+    || (ids.has(leg.fromPlaceId) && (leg.toPlaceId === 'STADIUM' || ids.has(leg.toPlaceId)))
+  ));
 }
 
 function PreferenceIcon({ value }: { value: string }) {
@@ -174,17 +244,67 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
     setSaving(true);
     try {
       setSavingMessage('출발지와 장소 좌표를 확인하는 중…');
-      const [arrivalCoordinate, departureCoordinate, stadiumCoordinate, candidates] = await Promise.all([
+      const [arrivalCoordinate, departureCoordinate, stadiumCoordinate, manualCandidates] = await Promise.all([
         resolveNamedLocation(journey.arrivalPlace.trim(), game.city),
         resolveNamedLocation(journey.departurePlace.trim(), game.city),
         resolveNamedLocation(game.stadium, game.city),
         resolvePlaceCandidates(places, game.city),
       ]);
+
+      if (preferences.length && manualCandidates.length >= 8) {
+        throw new Error('직접 추가한 장소가 8곳이라 성향 추천 장소를 더 넣을 수 없어요. 장소를 줄여 주세요.');
+      }
+
+      let candidates = manualCandidates;
+      if (preferences.length) {
+        setSavingMessage('선택한 성향에 맞는 장소를 찾는 중…');
+        const selectedPreferences = PREFERENCES.filter((item) => preferences.includes(item.value));
+        const groups = await Promise.all(selectedPreferences.map(async (item) => {
+          const result = await getCoursePlaceCandidates(recommendationRequest(item.value, arrivalCoordinate, game.city));
+          return { preference: item.value, places: result.places };
+        }));
+        const recommendations = shortlistRecommendations(groups, 8 - manualCandidates.length, manualCandidates);
+        if (!recommendations.length && !manualCandidates.length) {
+          throw new Error('선택한 성향에 맞는 장소를 찾지 못했어요. 다른 성향을 선택하거나 장소를 직접 추가해 주세요.');
+        }
+        candidates = [
+          ...manualCandidates,
+          ...recommendations.map((place) => ({
+            placeId: `recommended-${place.provider.toLowerCase()}-${place.externalId}`,
+            name: place.name,
+            address: place.address,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            stayDurationMinutes: 60,
+            mustVisit: false,
+          })),
+        ];
+      }
+
       setSavingMessage('각 구간의 실제 이동시간을 확인하는 중…');
       const [travelTimes, stadiumToDepartureMinutes] = await Promise.all([
         collectOptimizedTravelTimes(arrivalCoordinate, stadiumCoordinate, candidates, travelMode),
         getTravelMinutes(stadiumCoordinate, departureCoordinate, travelMode),
       ]);
+
+      let plannedCandidates = candidates;
+      let plannedTravelTimes = travelTimes;
+      if (preferences.length) {
+        const gameStartMillis = Date.parse(`${game.gameDate}T${game.gameStartTime}`);
+        const arrivalMillis = Date.parse(toLocalDateTime(journey.arrivalAt));
+        const minutesUntilGame = Math.floor((gameStartMillis - arrivalMillis) / 60_000) - 30;
+        plannedCandidates = selectFittingPlaces(
+          candidates,
+          travelTimes,
+          minutesUntilGame,
+          manualCandidates.map((place) => place.placeId),
+        );
+        if (!plannedCandidates.length) {
+          throw new Error('경기 시작 전 방문과 구장 이동까지 할 시간이 부족해요. 도착 시각이나 성향을 조정해 주세요.');
+        }
+        plannedTravelTimes = routeTimesForPlaces(travelTimes, plannedCandidates);
+      }
+
       setSavingMessage('최적 순서로 일정을 계산하고 저장하는 중…');
       const itinerary = await generateItinerary({
         gameId: game.gameId,
@@ -201,8 +321,8 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
         expectedGameDurationMinutes: 180,
         preferences,
         travelMode,
-        places: candidates,
-        travelTimes,
+        places: plannedCandidates,
+        travelTimes: plannedTravelTimes,
       });
       onSaved(itinerary);
     } catch (cause) {
