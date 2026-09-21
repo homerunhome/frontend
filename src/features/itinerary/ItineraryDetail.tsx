@@ -181,7 +181,7 @@ function draftFromPlace(place: ItineraryPlace, index: number): PlaceDraft {
     address: place.address ?? '',
     latitude: place.latitude ?? null,
     longitude: place.longitude ?? null,
-    stayDurationMinutes: place.stayDurationMinutes ?? 60,
+    stayDurationMinutes: place.stayDurationMinutes ?? 30,
     mustVisit: place.mustVisit ?? false,
   };
 }
@@ -314,7 +314,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
       address: place.roadAddress || place.address || '',
       latitude: place.latitude,
       longitude: place.longitude,
-      stayDurationMinutes: 60,
+      stayDurationMinutes: 30,
       mustVisit: false,
     }]);
     setSearchResults([]);

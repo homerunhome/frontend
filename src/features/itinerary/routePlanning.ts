@@ -44,7 +44,7 @@ export async function resolvePlaceCandidates(places: PlaceInput[], cityHint = ''
       address: place.address?.trim() || null,
       latitude: coordinate.latitude,
       longitude: coordinate.longitude,
-      stayDurationMinutes: place.stayDurationMinutes ?? 60,
+      stayDurationMinutes: place.stayDurationMinutes ?? 30,
       mustVisit: place.mustVisit ?? false,
     };
   }));
