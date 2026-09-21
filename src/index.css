@@ -865,7 +865,7 @@ body { caret-color: var(--orange); }
 .routine-place-list > li { min-width: 0; }
 .routine-list-empty { margin: auto 0; padding: 24px 12px; color: var(--muted); font-size: 13px; line-height: 1.6; text-align: center; }
 .routine-place-order { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: #1c745f; background: #eaf4ed; font-size: 10px; font-weight: 800; }
-.detail-routine-list { flex: 1; }
+.detail-routine-list { flex: 0 0 auto; }
 .detail-routine-item { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 8px; padding: 10px 8px; border: 1px solid #e4e7e4; border-radius: 11px; color: var(--ink); background: #fff; cursor: pointer; text-align: left; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease; }
 .detail-routine-item:hover, .detail-routine-item.is-active { border-color: #8bb7a4; background: #f7fbf7; box-shadow: 0 0 0 2px rgba(22, 133, 110, .08); }
 .detail-routine-item:focus-visible { outline: 2px solid #217cf9; outline-offset: 2px; }
