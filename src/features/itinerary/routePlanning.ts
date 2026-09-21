@@ -1,5 +1,6 @@
 import { geocodeAddress, getTravelMinutes, searchPlaces } from './api';
 import type { Coordinate, ItineraryCandidate, ItineraryRouteTime, ItineraryPlace, TravelMode } from './api';
+import { ApiRequestError } from '../../api/http';
 
 type PlaceInput = {
   placeId?: string | null;
@@ -102,21 +103,31 @@ export async function collectOptimizedTravelTimes(
     }
   }
 
-  const minutes = new Array<number>(pairs.length);
+  const minutes = new Array<number | null>(pairs.length);
   let nextIndex = 0;
   const workers = Array.from({ length: Math.min(6, pairs.length) }, async () => {
     while (nextIndex < pairs.length) {
       const index = nextIndex++;
       const pair = pairs[index];
-      minutes[index] = await getTravelMinutes(pair.origin, pair.destination, mode);
+      try {
+        minutes[index] = await getTravelMinutes(pair.origin, pair.destination, mode);
+      } catch (error) {
+        if (!(error instanceof ApiRequestError) || error.status !== 404 || error.code !== 'ROUTE_NOT_FOUND') {
+          throw error;
+        }
+        minutes[index] = null;
+      }
     }
   });
   await Promise.all(workers);
-  return pairs.map((pair, index) => ({
-    fromPlaceId: pair.fromPlaceId,
-    toPlaceId: pair.toPlaceId,
-    minutes: minutes[index],
-  }));
+  return pairs.flatMap((pair, index) => {
+    const legMinutes = minutes[index];
+    return legMinutes === null ? [] : [{
+      fromPlaceId: pair.fromPlaceId,
+      toPlaceId: pair.toPlaceId,
+      minutes: legMinutes,
+    }];
+  });
 }
 
 export function selectFittingPlaces(

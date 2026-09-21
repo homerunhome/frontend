@@ -300,7 +300,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
           manualCandidates.map((place) => place.placeId),
         );
         if (!plannedCandidates.length) {
-          throw new Error('경기 시작 전 방문과 구장 이동까지 할 시간이 부족해요. 도착 시각이나 성향을 조정해 주세요.');
+          throw new Error('경기 시작 전까지 가능한 코스를 찾지 못했어요. 도착 시각, 장소, 이동수단을 조정해 주세요.');
         }
         plannedTravelTimes = routeTimesForPlaces(travelTimes, plannedCandidates);
       }
