@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { geocodeAddress, getTravelTime, updateItineraryPlaces } from '../api/client';
+import { getTravelTime, updateItineraryPlaces } from '../api/client';
 import type { Coordinate, TravelMode } from '../api/types';
 import { useItinerary } from '../api/useItinerary';
+import { resolveNamedLocation } from '../features/itinerary/routePlanning';
 import { formatDate, formatTime } from '../itinerary/format';
 import { stationNameForDisplay } from '../features/trains/stationName';
 import { candidateToCoursePlace, itineraryPlacesToCoursePlaces, recalculateMapPositions } from './coursePlaces';
@@ -86,9 +87,9 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
     if (!itinerary) return;
     let active = true;
     void Promise.all([
-      geocodeAddress(arrivalPlace),
-      geocodeAddress(itinerary.stadium),
-      geocodeAddress(departurePlace),
+      resolveNamedLocation(arrivalPlace, '대전'),
+      resolveNamedLocation(itinerary.stadium, '대전'),
+      resolveNamedLocation(departurePlace, '대전'),
     ]).then(([arrival, stadium, departure]) => {
       if (active) setBoundaryCoordinates({ arrival, stadium, departure });
     }).catch((requestError: unknown) => {
