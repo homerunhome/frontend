@@ -21,3 +21,13 @@ export function rememberItineraryId(id: number): number[] {
   }
   return next;
 }
+
+export function removeItineraryId(id: number): number[] {
+  const next = loadItineraryIds().filter((savedId) => savedId !== id);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // 목록 화면에서 제거하는 동작이므로 브라우저 저장 실패가 화면 상태를 막지 않게 합니다.
+  }
+  return next;
+}

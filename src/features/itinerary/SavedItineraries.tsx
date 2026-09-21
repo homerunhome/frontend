@@ -5,6 +5,7 @@ import type { Itinerary } from './api';
 type Props = {
   ids: number[];
   onSelect: (itinerary: Itinerary) => void;
+  onRemove: (id: number) => void;
   onBrowseGames: () => void;
 };
 
@@ -13,7 +14,7 @@ function shortDate(value: string): string {
   return parts.length === 3 ? parts[1] + '월 ' + parts[2] + '일' : value;
 }
 
-export function SavedItineraries({ ids, onSelect, onBrowseGames }: Props) {
+export function SavedItineraries({ ids, onSelect, onRemove, onBrowseGames }: Props) {
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +40,12 @@ export function SavedItineraries({ ids, onSelect, onBrowseGames }: Props) {
 
   return (
     <section className="saved-page">
-      <div className="section-heading"><div><h1>내 원정 기록</h1></div></div>
+      <div className="section-heading">
+        <div>
+          <h1>내 원정 기록</h1>
+          <p className="saved-page-note">목록에서 제거해도 저장된 일정은 삭제되지 않아요.</p>
+        </div>
+      </div>
       {error && <p className="inline-warning" role="status">{error}</p>}
       {loading && <div className="state-panel" role="status"><span className="spinner" /> 저장한 일정을 확인하고 있어요.</div>}
       {!loading && itineraries.length === 0 && (
@@ -47,11 +53,19 @@ export function SavedItineraries({ ids, onSelect, onBrowseGames }: Props) {
       )}
       {!loading && itineraries.length > 0 && (
         <div className="saved-list">{itineraries.map((item) => (
-          <button className="saved-card" key={item.id} type="button" onClick={() => onSelect(item)}>
+          <article className="saved-card" key={item.id}>
             <span className="saved-date"><strong>{shortDate(item.gameDate)}</strong><small>{item.gameStartTime.slice(0, 5)}</small></span>
-            <span className="saved-info"><strong>{item.homeTeam} <small>VS</small> {item.awayTeam}</strong><span>{item.stadium}</span><small>{item.arrivalPlace} 도착 · {item.arrivalAt.split('T')[1]?.slice(0, 5)}</small></span>
-            <span className="saved-id"><span>#{item.id}</span><span aria-hidden="true">→</span></span>
-          </button>
+            <button className="saved-card-main" type="button" onClick={() => onSelect(item)}>
+              <span className="saved-info"><strong>{item.homeTeam} <small>VS</small> {item.awayTeam}</strong><span>{item.stadium}</span><small>{item.arrivalPlace} 도착 · {item.arrivalAt.split('T')[1]?.slice(0, 5)}</small></span>
+              <span className="saved-open-indicator" aria-hidden="true">→</span>
+            </button>
+            <div className="saved-card-actions">
+              <span className="saved-id">#{item.id}</span>
+              <button className="saved-card-remove" type="button" onClick={() => onRemove(item.id)} aria-label={`${item.homeTeam} 대 ${item.awayTeam} 일정을 목록에서 제거`} title="이 브라우저의 목록에서만 제거합니다.">
+                목록에서 제거
+              </button>
+            </div>
+          </article>
         ))}</div>
       )}
     </section>

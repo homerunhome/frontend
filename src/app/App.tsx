@@ -7,7 +7,7 @@ import { ItineraryPlanner } from '../features/itinerary/ItineraryPlanner';
 import { SavedItineraries } from '../features/itinerary/SavedItineraries';
 import { getItinerary } from '../features/itinerary/api';
 import type { Itinerary } from '../features/itinerary/api';
-import { loadItineraryIds, rememberItineraryId } from '../features/itinerary/storage';
+import { loadItineraryIds, rememberItineraryId, removeItineraryId } from '../features/itinerary/storage';
 
 type Screen = 'games' | 'planner' | 'saved' | 'detail';
 
@@ -62,6 +62,10 @@ function MainApp() {
     openDetail(result, true);
   }
 
+  function handleSavedRemoval(id: number) {
+    setSavedIds(removeItineraryId(id));
+  }
+
   return (
     <div className={screen === 'detail' ? 'app-shell app-shell-detail' : 'app-shell'}>
       <header className="site-header">
@@ -76,7 +80,7 @@ function MainApp() {
       <main className="page-content">
         {screen === 'games' && <GameSelection savedGameDates={savedGameDates} onSelect={(game) => { setSelectedGame(game); setScreen('planner'); }} />}
         {screen === 'planner' && selectedGame && <ItineraryPlanner key={selectedGame.gameId} game={selectedGame} onCancel={() => setScreen('games')} onSaved={handleSaved} />}
-        {screen === 'saved' && <SavedItineraries ids={savedIds} onSelect={handleSavedSelection} onBrowseGames={() => setScreen('games')} />}
+        {screen === 'saved' && <SavedItineraries ids={savedIds} onSelect={handleSavedSelection} onRemove={handleSavedRemoval} onBrowseGames={() => setScreen('games')} />}
         {screen === 'detail' && itinerary && <ItineraryDetail itinerary={itinerary} isSaved={detailFromSaved} onBack={() => setScreen(detailFromSaved ? 'saved' : 'games')} onUpdated={setItinerary} />}
       </main>
       <footer className="site-footer"><span>경기장에서 시작되는 대전의 하루</span><span>YOUR GAME. YOUR DAY.</span></footer>
