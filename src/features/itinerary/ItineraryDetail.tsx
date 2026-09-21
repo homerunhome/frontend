@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ItineraryMapPreview } from './ItineraryMapPreview';
 import { searchPlaces, updateItineraryPlan } from './api';
-import type { Itinerary, ItineraryCandidate, ItineraryPlace, ItineraryTrain, PlaceSearchResult, TravelMode } from './api';
+import type { Coordinate, Itinerary, ItineraryCandidate, ItineraryPlace, ItineraryTrain, PlaceSearchResult, TravelMode } from './api';
 import { formatApiError, measureSequentialRoute, resolveNamedLocation, resolvePlaceCandidates } from './routePlanning';
 
 type Props = {
@@ -199,6 +199,8 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
   const [searchMessage, setSearchMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [arrivalMapCoordinate, setArrivalMapCoordinate] = useState<Coordinate | null>(null);
+  const [stadiumMapCoordinate, setStadiumMapCoordinate] = useState<Coordinate | null>(null);
 
   useEffect(() => {
     setDraftPlaces(itinerary.places.map(draftFromPlace));
@@ -207,15 +209,57 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
     setTravelMode(travelModeOf(itinerary.travelMode));
   }, [itinerary]);
 
+  useEffect(() => {
+    let active = true;
+    setArrivalMapCoordinate(null);
+    setStadiumMapCoordinate(null);
+    const arrivalQuery = itinerary.arrivalPlace.trim();
+    const arrivalFallback = itinerary.arrivalTrain?.arrivalStation.trim();
+    const arrivalRequest = resolveNamedLocation(arrivalQuery).catch(() => (
+      arrivalFallback && arrivalFallback !== arrivalQuery
+        ? resolveNamedLocation(arrivalFallback).catch(() => null)
+        : null
+    ));
+    const stadiumRequest = resolveNamedLocation(itinerary.stadium).catch(() => null);
+
+    void Promise.all([arrivalRequest, stadiumRequest]).then(([arrival, stadium]) => {
+      if (!active) return;
+      setArrivalMapCoordinate(arrival);
+      setStadiumMapCoordinate(stadium);
+    });
+
+    return () => { active = false; };
+  }, [itinerary.arrivalPlace, itinerary.arrivalTrain?.arrivalStation, itinerary.stadium]);
+
   const visiblePlaces = editing
     ? draftPlaces
     : itinerary.places.map((place, index) => draftFromPlace(place, index));
-  const mapPlaces = visiblePlaces.map((place) => ({
+  const placePins = visiblePlaces.map((place, index) => ({
     key: place.key,
     name: place.name,
     latitude: place.latitude,
     longitude: place.longitude,
+    order: index + 1,
   }));
+  const mapPins = [
+    {
+      key: 'ARRIVAL',
+      name: itinerary.arrivalPlace,
+      latitude: arrivalMapCoordinate?.latitude ?? null,
+      longitude: arrivalMapCoordinate?.longitude ?? null,
+      order: 0,
+      boundary: 'arrival' as const,
+    },
+    ...placePins,
+    {
+      key: 'STADIUM',
+      name: itinerary.stadium,
+      latitude: stadiumMapCoordinate?.latitude ?? null,
+      longitude: stadiumMapCoordinate?.longitude ?? null,
+      order: placePins.length + 1,
+      boundary: 'stadium' as const,
+    },
+  ];
   const planCalculated = itinerary.stadiumArrivalAt != null;
 
   function togglePreference(value: string) {
@@ -363,7 +407,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
       <div className="routine-workspace detail-routine-workspace">
         <div className="detail-map-pane">
           <ItineraryMapPreview
-            places={mapPlaces}
+            places={mapPins}
             activePlaceKey={activePlaceKey}
             onSelectPlace={setActivePlaceKey}
           />
@@ -492,7 +536,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
                   </div>
                 </li>
                 {itinerary.places.map((place, index) => {
-                  const key = mapPlaces[index].key;
+                  const key = placePins[index].key;
                   const active = activePlaceKey === key;
                   return (
                     <li key={key}>

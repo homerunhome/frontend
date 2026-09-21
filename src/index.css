@@ -854,6 +854,8 @@ body { caret-color: var(--orange); }
 .routine-map-canvas { position: relative; min-width: 0; min-height: 0; flex: 1; overflow: hidden; background: #f1f5f0; }
 .kakao-map-surface { position: absolute; inset: 0; width: 100%; height: 100%; }
 .kakao-routine-pin { min-width: 42px; height: 42px; padding: 0 7px; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #16856e; box-shadow: 0 3px 10px rgba(25, 50, 42, .28); cursor: pointer; font-size: 11px; font-weight: 800; }
+.kakao-routine-pin.is-arrival { background: #316f97; cursor: default; }
+.kakao-routine-pin.is-stadium { background: #bd4a25; cursor: default; }
 .kakao-routine-pin:hover, .kakao-routine-pin.is-active { background: #f0652a; }
 .kakao-routine-pin:focus-visible { outline: 3px solid #172f28; outline-offset: 2px; }
 .routine-map-state { position: absolute; z-index: 2; inset: auto auto 16px 16px; width: fit-content; max-width: min(360px, calc(100% - 32px)); padding: 11px 15px; border: 1px solid rgba(26, 28, 32, .12); border-radius: 9px; color: #536458; background: rgba(255, 255, 255, .96); box-shadow: 0 2px 8px rgba(26, 28, 32, .12); font-size: 12px; line-height: 1.5; text-align: left; }
@@ -930,6 +932,8 @@ body { caret-color: var(--orange); }
 }
 .app-shell-detail .kakao-routine-pin:hover,
 .app-shell-detail .kakao-routine-pin.is-active { color: #fff; background: #f0652a; }
+.app-shell-detail .kakao-routine-pin.is-arrival { background: #316f97; }
+.app-shell-detail .kakao-routine-pin.is-stadium { background: #bd4a25; }
 .app-shell-detail .kakao-routine-pin:focus-visible { outline-color: #172f28; }
 .app-shell-detail .routine-sidebar {
   gap: 0;

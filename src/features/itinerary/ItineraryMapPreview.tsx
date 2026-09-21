@@ -5,6 +5,8 @@ type PlacePin = {
   name: string;
   latitude: number | null;
   longitude: number | null;
+  order?: number;
+  boundary?: 'arrival' | 'stadium';
 };
 
 type Props = {
@@ -105,10 +107,10 @@ function loadKakaoMapSdk(appKey: string): Promise<KakaoSdk> {
 }
 
 function coordinatePlaces(places: PlacePin[]) {
-  return places.flatMap((place, order) => (
+  return places.flatMap((place, index) => (
     place.latitude !== null && place.longitude !== null
       && Number.isFinite(place.latitude) && Number.isFinite(place.longitude)
-      ? [{ ...place, order }]
+      ? [{ ...place, order: place.order ?? index }]
       : []
   ));
 }
@@ -122,6 +124,11 @@ export function ItineraryMapPreview({ places, activePlaceKey, onSelectPlace }: P
   );
   const appKey = import.meta.env.VITE_KAKAO_MAP_APP_KEY?.trim();
   const locatedPlaces = coordinatePlaces(places);
+  const missingBoundaryCoordinate = places.some((place) => (
+    place.boundary != null
+      && (place.latitude === null || place.longitude === null
+        || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude))
+  ));
 
   useEffect(() => {
     if (!appKey) {
@@ -172,17 +179,26 @@ export function ItineraryMapPreview({ places, activePlaceKey, onSelectPlace }: P
       const position = new sdk.maps.LatLng(place.latitude as number, place.longitude as number);
       bounds.extend(position);
 
-      const pin = document.createElement('button');
-      const active = place.key === activePlaceKey;
-      pin.type = 'button';
-      pin.className = 'kakao-routine-pin' + (active ? ' is-active' : '');
+      const pin = document.createElement(place.boundary ? 'div' : 'button');
+      const active = !place.boundary && place.key === activePlaceKey;
+      pin.className = 'kakao-routine-pin'
+        + (active ? ' is-active' : '')
+        + (place.boundary ? ` is-${place.boundary}` : '');
       pin.textContent = String(place.order + 1).padStart(2, '0');
-      pin.setAttribute('aria-label', `${place.order + 1}번째 장소, ${place.name}`);
-      pin.setAttribute('aria-pressed', String(active));
-      pin.addEventListener('click', () => onSelectPlace(place.key));
+      const boundaryLabel = place.boundary === 'arrival' ? '도착역' : '경기장';
+      pin.setAttribute('aria-label', place.boundary
+        ? `${place.order + 1}번 ${boundaryLabel}, ${place.name}`
+        : `${place.order + 1}번째 장소, ${place.name}`);
+      if (place.boundary) {
+        pin.setAttribute('role', 'img');
+      } else {
+        (pin as HTMLButtonElement).type = 'button';
+        pin.setAttribute('aria-pressed', String(active));
+        pin.addEventListener('click', () => onSelectPlace(place.key));
+      }
 
       overlays.push(new sdk.maps.CustomOverlay({
-        clickable: true,
+        clickable: !place.boundary,
         content: pin,
         map,
         position,
@@ -220,14 +236,16 @@ export function ItineraryMapPreview({ places, activePlaceKey, onSelectPlace }: P
       ? '지도를 불러오지 못했어요. 앱 키와 등록 도메인을 확인해 주세요.'
       : sdkState === 'loading'
         ? '카카오 지도를 불러오는 중이에요.'
-        : locatedPlaces.length === 0
-          ? places.length ? '좌표가 있는 장소만 지도에 표시할 수 있어요.' : '장소를 추가하면 위치가 지도에 표시돼요.'
+        : missingBoundaryCoordinate
+          ? '도착역 또는 경기장 위치를 찾지 못해 해당 지점은 지도에 표시하지 못했어요.'
+          : locatedPlaces.length === 0
+            ? places.length ? '좌표가 있는 장소만 지도에 표시할 수 있어요.' : '장소를 추가하면 위치가 지도에 표시돼요.'
           : '';
 
   return (
     <section className="routine-map-card" aria-label="루틴 위치 지도">
       <div className="routine-map-canvas">
-        <div ref={mapElementRef} className="kakao-map-surface" aria-label="저장한 장소의 카카오 지도" />
+        <div ref={mapElementRef} className="kakao-map-surface" aria-label="도착역부터 경기장까지의 일정 지도" />
         {!!mapMessage && <div className={'routine-map-state is-' + sdkState} role="status">{mapMessage}</div>}
       </div>
     </section>

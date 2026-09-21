@@ -1,4 +1,16 @@
-type ApiError = { message?: string };
+type ApiErrorBody = { code?: string; message?: string };
+
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.code = code;
+  }
+}
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -22,8 +34,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const error = payload as ApiError | null;
-    throw new Error(error?.message || '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    const error = payload as ApiErrorBody | null;
+    throw new ApiRequestError(
+      response.status,
+      error?.message || '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      error?.code,
+    );
   }
   return payload as T;
 }
