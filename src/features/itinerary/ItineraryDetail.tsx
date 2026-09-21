@@ -258,7 +258,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
                     <h1>{itinerary.homeTeam} vs {itinerary.awayTeam}</h1>
                     <p>{itinerary.stadium} · {dateLabel(itinerary.gameDate)} · {timeLabel(itinerary.gameStartTime)}</p>
                   </div>
-                  <a className="button button-primary detail-edit-button" href={`/itineraries/${itinerary.id}/course/edit`} target="_blank" rel="noopener noreferrer">코스 수정</a>
+                  <a className="button button-primary detail-edit-button" href={`/itineraries/${itinerary.id}/course/edit`}>코스 수정</a>
                 </div>
                 <div className="detail-summary-status">
                   <span className="detail-status-badge">{statusLabel(itinerary.status, planCalculated)}</span>

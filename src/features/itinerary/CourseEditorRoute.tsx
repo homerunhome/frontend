@@ -8,9 +8,8 @@ type Props = {
   initialEditing?: boolean;
 };
 
-function closeEditor() {
-  window.close();
-  window.setTimeout(() => window.location.assign('/'), 100);
+function leaveEditor(itineraryId: number) {
+  window.location.assign(`/itineraries/${itineraryId}`);
 }
 
 function ItineraryRoute({ itineraryId, initialEditing = false }: Props) {
@@ -45,16 +44,16 @@ function ItineraryRoute({ itineraryId, initialEditing = false }: Props) {
 
   if (!itinerary) return <main className="page-state"><strong>일정을 불러오는 중입니다.</strong></main>;
 
-  const leavePage = initialEditing ? closeEditor : () => window.location.assign('/');
+  const leavePage = initialEditing ? () => leaveEditor(itineraryId) : () => window.location.assign('/');
 
   return (
     <div className="app-shell app-shell-detail">
       <header className="site-header">
-        <button className="brand" type="button" onClick={leavePage} aria-label={initialEditing ? '코스 수정 창 닫기' : '경기 일정으로 이동'}>
+        <button className="brand" type="button" onClick={leavePage} aria-label={initialEditing ? '코스 수정 종료' : '경기 일정으로 이동'}>
           <span className="brand-name">HOMERUN<span>HOME</span></span>
         </button>
         <nav aria-label={initialEditing ? '코스 수정 메뉴' : '일정 상세 메뉴'}>
-          <button className="nav-link" type="button" onClick={leavePage}>{initialEditing ? '편집 창 닫기' : '경기 일정'}</button>
+          <button className="nav-link" type="button" onClick={leavePage}>{initialEditing ? '편집 종료' : '경기 일정'}</button>
         </nav>
       </header>
       <main className="page-content">
@@ -64,7 +63,7 @@ function ItineraryRoute({ itineraryId, initialEditing = false }: Props) {
           initialEditing={initialEditing}
           onBack={leavePage}
           onUpdated={setItinerary}
-          onSaved={initialEditing ? closeEditor : undefined}
+          onSaved={initialEditing ? () => leaveEditor(itineraryId) : undefined}
         />
       </main>
     </div>
