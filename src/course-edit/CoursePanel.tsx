@@ -5,13 +5,15 @@ type CoursePanelProps = {
   selectedPlaceId: string;
   travelMinutes: Record<string, number | null>;
   departureLabel: string;
+  travelModeLabel: string;
   onSelectPlace: (id: string) => void;
   onMovePlace: (id: string, direction: -1 | 1) => void;
   onRemovePlace: (id: string) => void;
+  onUpdateStayMinutes: (id: string, minutes: number) => void;
   onExplore: () => void;
 };
 
-export function CoursePanel({ places, selectedPlaceId, travelMinutes, departureLabel, onSelectPlace, onMovePlace, onRemovePlace, onExplore }: CoursePanelProps) {
+export function CoursePanel({ places, selectedPlaceId, travelMinutes, departureLabel, travelModeLabel, onSelectPlace, onMovePlace, onRemovePlace, onUpdateStayMinutes, onExplore }: CoursePanelProps) {
   return (
     <div className="panel-content course-panel">
       <div className="panel-heading">
@@ -27,7 +29,7 @@ export function CoursePanel({ places, selectedPlaceId, travelMinutes, departureL
             <li key={place.id} className="course-item-wrap">
               {index > 0 && (
                 <div className="travel-connector">
-                  <span>{travelMinutes[place.id] === undefined ? '이동시간 확인 중' : travelMinutes[place.id] === null ? '이동시간 확인 불가' : `자동차 ${travelMinutes[place.id]}분`}</span>
+                  <span>{travelMinutes[place.id] === undefined ? '이동시간 확인 중' : travelMinutes[place.id] === null ? '이동시간 확인 불가' : `${travelModeLabel} ${travelMinutes[place.id]}분`}</span>
                 </div>
               )}
               <article className={selectedPlaceId === place.id ? 'course-item is-selected' : 'course-item'}>
@@ -37,6 +39,11 @@ export function CoursePanel({ places, selectedPlaceId, travelMinutes, departureL
                   <h2><button className="place-name-button" type="button" aria-pressed={selectedPlaceId === place.id} onClick={() => onSelectPlace(place.id)}>{place.name}</button></h2>
                   <p title={place.address}>{place.address}</p>
                   {place.provider && <span className="place-provider">{place.provider === 'TOUR_API' ? '한국관광공사' : place.provider === 'KAKAO' ? '카카오' : '저장된 일정'}</span>}
+                  <label className="stay-control">체류 시간
+                    <select value={place.stayMinutes} onChange={(event) => onUpdateStayMinutes(place.id, Number(event.target.value))}>
+                      {[30, 45, 60, 90, 120, 180].map((minutes) => <option value={minutes} key={minutes}>{minutes}분</option>)}
+                    </select>
+                  </label>
                 </div>
                 <div className="place-actions" aria-label={`${place.name} 순서 변경`}>
                   <button type="button" disabled={index === 0} onClick={() => onMovePlace(place.id, -1)} aria-label={`${place.name} 위로 이동`}>↑</button>

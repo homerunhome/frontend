@@ -60,6 +60,8 @@ export function itineraryPlacesToCoursePlaces(places: ItineraryPlaceResponse[]):
     latitude: place.latitude,
     longitude: place.longitude,
     provider: 'ITINERARY',
+    stayMinutes: place.stayDurationMinutes ?? 60,
+    mustVisit: place.mustVisit ?? false,
   }));
 }
 
@@ -78,6 +80,8 @@ export function candidateToCoursePlace(candidate: CoursePlaceCandidate): CourseP
     detailUrl: candidate.detailUrl,
     distanceMeters: candidate.distanceMeters,
     provider: candidate.provider,
+    stayMinutes: 60,
+    mustVisit: false,
   };
 }
 

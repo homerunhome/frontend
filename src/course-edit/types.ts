@@ -1,4 +1,4 @@
-export type PlaceKind = 'food' | 'cafe' | 'convenience' | 'activity' | 'tour' | 'culture' | 'event' | 'place';
+export type PlaceKind = 'station' | 'stadium' | 'food' | 'cafe' | 'convenience' | 'activity' | 'tour' | 'culture' | 'event' | 'place';
 export type PanelMode = 'course' | 'explore';
 
 export type MapPosition = {
@@ -20,4 +20,6 @@ export type CoursePlace = {
   detailUrl?: string | null;
   distanceMeters?: number | null;
   provider?: 'KAKAO' | 'TOUR_API' | 'ITINERARY';
+  stayMinutes: number;
+  mustVisit: boolean;
 };

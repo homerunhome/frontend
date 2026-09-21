@@ -7,7 +7,10 @@ export function loadKakaoMaps(): Promise<KakaoMapsNamespace> {
 
   if (kakaoMapsPromise) return kakaoMapsPromise;
 
-  const appKey = import.meta.env.VITE_KAKAO_MAP_APP_KEY?.trim();
+  const appKey = (
+    import.meta.env.VITE_KAKAO_MAP_APP_KEY
+    || import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY
+  )?.trim();
   if (!appKey) {
     return Promise.reject(new Error('카카오 지도 JavaScript 키가 설정되지 않았습니다.'));
   }

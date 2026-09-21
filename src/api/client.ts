@@ -5,6 +5,9 @@ import type {
   CoursePlaceCandidateResponse,
   ItineraryResponse,
   TravelTimeResponse,
+  TravelMode,
+  ItineraryPlacesEditRequest,
+  TourismContentDetail,
 } from './types';
 
 export class ApiError extends Error {
@@ -52,10 +55,29 @@ export function getCoursePlaceCandidates(body: CoursePlaceCandidateRequest, sign
   });
 }
 
-export function getTravelTime(origin: Coordinate, destination: Coordinate, signal?: AbortSignal) {
+export function getTravelTime(origin: Coordinate, destination: Coordinate, transportMode: TravelMode = 'CAR', signal?: AbortSignal) {
   return request<TravelTimeResponse>('/api/travel-times', {
     method: 'POST',
-    body: JSON.stringify({ origin, destination, transportMode: 'CAR' }),
+    body: JSON.stringify({ origin, destination, transportMode }),
     signal,
   });
+}
+
+export function geocodeAddress(address: string, signal?: AbortSignal) {
+  return request<Coordinate>('/api/geocoding', {
+    method: 'POST',
+    body: JSON.stringify({ address }),
+    signal,
+  });
+}
+
+export function updateItineraryPlaces(id: number, body: ItineraryPlacesEditRequest) {
+  return request<ItineraryResponse>(`/api/itineraries/${id}/places`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+export function getTourismContentDetail(contentId: string, signal?: AbortSignal) {
+  return request<TourismContentDetail>(`/api/tourism/contents/${encodeURIComponent(contentId)}`, { signal });
 }

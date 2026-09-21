@@ -120,9 +120,12 @@ export function ItineraryMapPreview({ places, activePlaceKey, onSelectPlace }: P
   const [sdk, setSdk] = useState<KakaoSdk | null>(null);
   const [map, setMap] = useState<KakaoMap | null>(null);
   const [sdkState, setSdkState] = useState<'loading' | 'ready' | 'missing' | 'error'>(
-    import.meta.env.VITE_KAKAO_MAP_APP_KEY?.trim() ? 'loading' : 'missing',
+    (import.meta.env.VITE_KAKAO_MAP_APP_KEY || import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY)?.trim() ? 'loading' : 'missing',
   );
-  const appKey = import.meta.env.VITE_KAKAO_MAP_APP_KEY?.trim();
+  const appKey = (
+    import.meta.env.VITE_KAKAO_MAP_APP_KEY
+    || import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY
+  )?.trim();
   const locatedPlaces = coordinatePlaces(places);
   const missingBoundaryCoordinate = places.some((place) => (
     place.boundary != null

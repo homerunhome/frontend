@@ -1060,3 +1060,204 @@ body { caret-color: var(--orange); }
   .detail-journey-edit-grid,
   .detail-train-edit-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Restored course editor: map-first layout backed by the itinerary and tourism APIs. */
+.course-editor-shell {
+  min-height: 100dvh;
+  color: var(--ink);
+  background: #f4f6f5;
+  --editor-dark: #173c32;
+  --editor-accent: #079171;
+  --editor-accent-dark: #00745f;
+}
+.course-editor-shell button { cursor: pointer; }
+.course-editor-shell button:disabled { cursor: not-allowed; opacity: .5; }
+.course-editor-shell .topbar {
+  position: relative;
+  z-index: 20;
+  height: 72px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .97);
+}
+.course-editor-shell .topbar__lead,
+.course-editor-shell .topbar__actions { display: flex; align-items: center; gap: 14px; }
+.course-editor-shell .topbar__title { display: grid; gap: 3px; padding-left: 16px; border-left: 1px solid var(--line); }
+.course-editor-shell .topbar__title strong { font-size: 16px; }
+.course-editor-shell .topbar__title span { color: var(--muted); font-size: 12px; }
+.course-editor-shell .text-button { min-height: 42px; padding: 0 4px; border: 0; color: var(--ink); background: transparent; font-weight: 700; }
+.course-editor-shell .text-button--back { display: inline-flex; align-items: center; gap: 8px; }
+.course-editor-shell .text-button--back span { font-size: 20px; }
+.course-editor-shell .button--primary { color: #fff; background: var(--editor-accent-dark); }
+.course-editor-shell .button--primary:hover:not(:disabled) { background: #005e4d; }
+.course-editor-shell .button--secondary { color: var(--ink); border-color: #cfd6d2; background: #fff; }
+.course-editor-shell .button--dark { min-height: 38px; padding: 0 13px; color: #fff; background: var(--editor-dark); }
+.course-editor-shell .editor-layout { height: calc(100dvh - 72px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(450px, 510px); overflow: hidden; }
+.course-editor-shell .map-section { position: relative; min-width: 0; overflow: hidden; background: #e9efe9; }
+.course-editor-shell .course-map { position: absolute; inset: 0; overflow: hidden; background: #e9efe9; }
+.course-editor-shell .kakao-map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.course-editor-shell .kakao-course-marker {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--editor-dark);
+  box-shadow: 0 5px 16px rgba(23, 60, 50, .25);
+  font-size: 11px;
+  font-weight: 900;
+}
+.course-editor-shell .kakao-course-marker strong {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  max-width: 150px;
+  overflow: hidden;
+  transform: translateX(-50%);
+  padding: 5px 8px;
+  border: 1px solid rgba(23, 60, 50, .16);
+  border-radius: 7px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 4px 12px rgba(23, 60, 50, .12);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.course-editor-shell .kakao-course-marker.is-selected { background: var(--orange); transform: scale(1.1); }
+.course-editor-shell .map-error { position: absolute; z-index: 12; right: 20px; bottom: 72px; max-width: 300px; padding: 12px 14px; display: grid; gap: 4px; border: 1px solid #efc9bd; border-radius: 10px; color: #8a3517; background: rgba(255, 248, 245, .96); font-size: 11px; }
+.course-editor-shell .map-current { position: absolute; z-index: 10; right: 20px; bottom: 20px; min-height: 42px; padding: 0 13px; border: 1px solid #cfd6d2; border-radius: 9px; color: var(--ink); background: #fff; box-shadow: 0 7px 20px rgba(23, 60, 50, .14); font-size: 12px; font-weight: 800; }
+.course-editor-shell .trip-card { position: absolute; z-index: 10; top: 20px; left: 20px; width: min(310px, calc(100% - 40px)); padding: 17px; display: grid; gap: 5px; border: 1px solid rgba(255, 255, 255, .24); border-radius: 12px; color: #fff; background: rgba(23, 60, 50, .94); box-shadow: 0 18px 50px rgba(23, 60, 50, .18); }
+.course-editor-shell .trip-card__label { color: #aad9ca; font-size: 11px; font-weight: 800; }
+.course-editor-shell .trip-card strong { font-size: 18px; letter-spacing: -.03em; }
+.course-editor-shell .trip-card > span:not(.trip-card__label) { color: #d8e6e1; font-size: 12px; }
+.course-editor-shell .trip-card__meta { margin-top: 8px; padding-top: 10px; display: flex; gap: 12px; border-top: 1px solid rgba(255, 255, 255, .14); font-size: 11px; font-weight: 700; }
+.course-editor-shell .map-legend { position: absolute; z-index: 10; left: 20px; bottom: 20px; min-height: 42px; padding: 0 14px; display: flex; align-items: center; gap: 14px; border: 1px solid rgba(23, 60, 50, .12); border-radius: 9px; background: rgba(255, 255, 255, .94); box-shadow: 0 8px 24px rgba(23, 60, 50, .12); color: var(--muted); font-size: 11px; font-weight: 700; }
+.course-editor-shell .map-legend span { display: flex; align-items: center; gap: 6px; }
+.course-editor-shell .legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--editor-dark); }
+.course-editor-shell .legend-dot--station { background: #316f97; }
+.course-editor-shell .legend-dot--stadium { background: #bd4a25; }
+.course-editor-shell .side-panel { position: relative; z-index: 12; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: #fff; box-shadow: -12px 0 36px rgba(23, 60, 50, .06); }
+.course-editor-shell .panel-tabs { height: 58px; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+.course-editor-shell .panel-tab { border: 0; border-bottom: 3px solid transparent; color: #747b86; background: transparent; font-weight: 800; }
+.course-editor-shell .panel-tab span { display: inline-grid; min-width: 22px; height: 22px; margin-left: 4px; place-items: center; border-radius: 999px; color: #fff; background: #9aa09d; font-size: 11px; }
+.course-editor-shell .panel-tab.is-active { color: var(--ink); border-bottom-color: var(--editor-accent); }
+.course-editor-shell .panel-tab.is-active span { background: var(--editor-dark); }
+.course-editor-shell .panel-content { flex: 1; min-height: 0; padding: 24px; overflow-y: auto; }
+.course-editor-shell .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.course-editor-shell .panel-heading--stacked { display: block; }
+.course-editor-shell .panel-heading h1 { margin: 0; font-size: 25px; line-height: 1.25; letter-spacing: -.045em; }
+.course-editor-shell .panel-heading p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.course-editor-shell .course-list { margin: 22px 0 0; padding: 0; list-style: none; }
+.course-editor-shell .course-item-wrap { position: relative; }
+.course-editor-shell .travel-connector { height: 38px; margin-left: 17px; padding-left: 24px; display: flex; align-items: center; border-left: 2px dotted #b6c0bc; }
+.course-editor-shell .travel-connector span { color: #747b86; font-size: 11px; font-weight: 700; }
+.course-editor-shell .course-item { position: relative; min-height: 142px; padding: 16px 44px 16px 52px; border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: border-color .18s ease, box-shadow .18s ease; }
+.course-editor-shell .course-item:hover,
+.course-editor-shell .course-item.is-selected { border-color: #77ad9c; box-shadow: 0 8px 24px rgba(23, 60, 50, .08); }
+.course-editor-shell .place-index { position: absolute; top: 16px; left: 14px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--editor-dark); font-size: 12px; font-weight: 900; }
+.course-editor-shell .place-copy { min-width: 0; }
+.course-editor-shell .place-category { color: var(--editor-accent-dark); font-size: 10px; font-weight: 800; }
+.course-editor-shell .place-copy h2 { margin: 3px 0 4px; font-size: 16px; }
+.course-editor-shell .place-name-button { padding: 0; border: 0; color: inherit; background: transparent; font-weight: 800; text-align: left; }
+.course-editor-shell .place-copy p { margin: 0; overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.course-editor-shell .place-provider { display: inline-block; margin-top: 9px; padding: 4px 7px; border-radius: 6px; color: #59615d; background: #eef3f0; font-size: 9px; font-weight: 800; }
+.course-editor-shell .stay-control { width: fit-content; margin-top: 10px; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.course-editor-shell .stay-control select { height: 30px; padding: 0 24px 0 8px; border: 1px solid #d5dcd8; border-radius: 7px; color: var(--ink); background: #f8faf9; font-size: 11px; font-weight: 800; }
+.course-editor-shell .place-actions { position: absolute; top: 12px; right: 10px; display: grid; gap: 3px; }
+.course-editor-shell .place-actions button { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 7px; color: #69716d; background: #f1f4f2; font-weight: 900; }
+.course-editor-shell .place-actions .remove-button:hover { color: #a72d22; background: #fff0ee; }
+.course-editor-shell .return-ticket { margin-top: 22px; padding: 17px; display: grid; gap: 5px; border-radius: 12px; color: #fff; background: var(--editor-dark); }
+.course-editor-shell .return-ticket span { color: #aad9ca; font-size: 10px; font-weight: 800; }
+.course-editor-shell .return-ticket strong { font-size: 14px; }
+.course-editor-shell .return-ticket small { color: #c6d8d2; font-size: 11px; }
+.course-editor-shell .empty-state { margin-top: 26px; padding: 34px 22px; text-align: center; border: 1px dashed #c7d0cb; border-radius: 12px; background: #f8faf9; }
+.course-editor-shell .empty-state p { margin: 7px 0 18px; color: var(--muted); font-size: 12px; }
+.course-editor-shell .empty-state--compact { margin-top: 14px; padding: 26px 18px; }
+.course-editor-shell .search-box { margin-top: 22px; }
+.course-editor-shell .search-box label,
+.course-editor-shell .filter-group legend { color: #4f5753; font-size: 12px; font-weight: 800; }
+.course-editor-shell .search-row { margin-top: 8px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.course-editor-shell .search-row input { min-width: 0; height: 44px; padding: 0 13px; border: 1px solid #cfd6d2; border-radius: 9px; color: var(--ink); background: #fff; }
+.course-editor-shell .filter-group { margin: 20px 0 0; padding: 0; border: 0; }
+.course-editor-shell .chip-list { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 7px; }
+.course-editor-shell .filter-chip { min-height: 36px; padding: 0 11px; border: 1px solid #d5dcd8; border-radius: 999px; color: #59615d; background: #fff; font-size: 11px; font-weight: 800; }
+.course-editor-shell .filter-chip:hover,
+.course-editor-shell .filter-chip.is-active { color: #fff; border-color: var(--editor-dark); background: var(--editor-dark); }
+.course-editor-shell .result-summary { margin-top: 22px; padding-top: 17px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.course-editor-shell .inline-alert { display: grid; gap: 3px; margin: 12px 0 0; padding: 12px 14px; border: 1px solid #f0c9bc; border-radius: 12px; color: #8b361a; background: #fff7f3; font-size: 13px; }
+.course-editor-shell .inline-alert strong { font-size: 14px; }
+.course-editor-shell .result-list { margin: 12px 0 0; padding: 0; display: grid; gap: 9px; list-style: none; }
+.course-editor-shell .result-item { min-height: 92px; padding: 11px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 12px; }
+.course-editor-shell .result-thumbnail { width: 58px; height: 64px; display: grid; place-items: center; overflow: hidden; border-radius: 9px; color: #fff; background: #5f8378; }
+.course-editor-shell .result-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.course-editor-shell .result-copy { min-width: 0; display: grid; gap: 3px; }
+.course-editor-shell .result-copy span { color: var(--editor-accent-dark); font-size: 9px; font-weight: 800; }
+.course-editor-shell .result-copy strong,
+.course-editor-shell .result-copy p { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.course-editor-shell .result-copy strong { font-size: 14px; }
+.course-editor-shell .result-copy p { margin: 0; color: var(--muted); font-size: 11px; }
+.course-editor-shell .result-actions { display: grid; gap: 6px; }
+.course-editor-shell .add-button,
+.course-editor-shell .detail-button { min-width: 54px; min-height: 34px; padding: 0 9px; border: 1px solid var(--editor-dark); border-radius: 8px; color: #fff; background: var(--editor-dark); font-size: 10px; font-weight: 800; }
+.course-editor-shell .detail-button { color: var(--editor-dark); background: #fff; }
+.course-editor-shell .add-button.is-added { color: #747b86; border-color: #d9dfdb; background: #eef2f0; }
+.course-editor-shell .result-skeleton { height: 92px; border-radius: 12px; background: linear-gradient(100deg, #eef2f0 25%, #f8faf9 42%, #eef2f0 60%); background-size: 240% 100%; animation: course-editor-shimmer 1.1s ease-in-out infinite; }
+.course-editor-shell .tourism-detail { display: grid; align-content: start; gap: 18px; }
+.course-editor-shell .tourism-detail__hero { width: 100%; max-height: 230px; object-fit: cover; border-radius: 12px; }
+.course-editor-shell .tourism-detail__heading span { color: var(--editor-accent-dark); font-size: 10px; font-weight: 800; }
+.course-editor-shell .tourism-detail__heading h1 { margin: 6px 0; font-size: 26px; }
+.course-editor-shell .tourism-detail__heading p,
+.course-editor-shell .tourism-detail__overview,
+.course-editor-shell .tourism-detail__contact { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.course-editor-shell .tourism-detail section { padding-top: 16px; border-top: 1px solid var(--line); }
+.course-editor-shell .tourism-detail h2 { margin: 0 0 10px; font-size: 14px; }
+.course-editor-shell .tourism-detail dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.course-editor-shell .tourism-detail dl div { min-width: 0; padding: 10px; border-radius: 8px; background: #f4f7f5; }
+.course-editor-shell .tourism-detail dt { color: var(--muted); font-size: 10px; }
+.course-editor-shell .tourism-detail dd { margin: 4px 0 0; color: var(--ink); font-size: 11px; line-height: 1.45; }
+.course-editor-shell .toast { position: fixed; z-index: 40; left: 50%; bottom: 24px; min-width: min(380px, calc(100vw - 32px)); min-height: 50px; padding: 0 10px 0 17px; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; gap: 18px; border-radius: 10px; color: #fff; background: var(--editor-dark); box-shadow: 0 14px 40px rgba(23, 60, 50, .28); font-size: 13px; font-weight: 700; }
+.course-editor-shell .toast button { width: 36px; height: 36px; border: 0; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, .1); font-size: 18px; }
+
+@keyframes course-editor-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+@media (max-width: 900px) {
+  .course-editor-shell .topbar { height: auto; min-height: 72px; padding: 11px 16px; }
+  .course-editor-shell .topbar__title span { display: none; }
+  .course-editor-shell .editor-layout { height: auto; min-height: calc(100dvh - 72px); grid-template-columns: 1fr; grid-template-rows: 46dvh auto; overflow: visible; }
+  .course-editor-shell .map-section { min-height: 360px; }
+  .course-editor-shell .side-panel { min-height: 54dvh; border-top: 1px solid var(--line); border-left: 0; }
+  .course-editor-shell .panel-content { overflow: visible; }
+  .course-editor-shell .trip-card { top: 14px; left: 14px; }
+  .course-editor-shell .map-legend { display: none; }
+}
+
+@media (max-width: 560px) {
+  .course-editor-shell .topbar { gap: 8px; }
+  .course-editor-shell .topbar__title { display: none; }
+  .course-editor-shell .topbar__lead,
+  .course-editor-shell .topbar__actions { gap: 7px; }
+  .course-editor-shell .editor-layout { grid-template-rows: 42dvh auto; }
+  .course-editor-shell .map-section { min-height: 320px; }
+  .course-editor-shell .trip-card { width: 245px; padding: 13px; }
+  .course-editor-shell .trip-card strong { font-size: 15px; }
+  .course-editor-shell .trip-card__meta { display: none; }
+  .course-editor-shell .panel-tabs { padding: 0 14px; }
+  .course-editor-shell .panel-content { padding: 20px 16px 30px; }
+  .course-editor-shell .result-item { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; padding: 9px; }
+  .course-editor-shell .result-thumbnail { width: 48px; height: 58px; }
+  .course-editor-shell .tourism-detail dl { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-editor-shell *,
+  .course-editor-shell *::before,
+  .course-editor-shell *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
