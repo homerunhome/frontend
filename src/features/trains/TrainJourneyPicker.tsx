@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getSchedulesFromDaejeon, getSchedulesToDaejeon, getTrainCities, getTrainStations } from './api';
 import type { TrainCity, TrainSchedule, TrainStation } from './api';
+import { stationNameForDisplay } from './stationName';
 import { StationSelector } from './StationSelector';
 import type { StationSelection } from './StationSelector';
 import type { ItineraryTrain } from '../itinerary/api';
@@ -176,7 +177,7 @@ function TransportCard(props: TransportCardProps) {
               <div className="selected-route-point">
                 <small>도착</small>
                 <div className="selected-route-location-time">
-                  <span>{props.selected.arrivalStation}</span>
+                  <span>{goingToDaejeon ? stationNameForDisplay(props.selected.arrivalStation) : props.selected.arrivalStation}</span>
                   <strong>{formatTime(props.selected.arrivalAt)}</strong>
                 </div>
               </div>
@@ -401,7 +402,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
       setArrivalError('');
       onChange({
         ...value,
-        arrivalPlace: schedule.arrivalStation,
+        arrivalPlace: stationNameForDisplay(schedule.arrivalStation),
         arrivalAt: train.arrivalAt,
         arrivalTrain: train,
       });
@@ -532,7 +533,7 @@ export function TrainJourneyPicker({ gameDate, value, onChange }: Props) {
           schedules={options('arrival', arrivalSchedules, arrivalSelected, arrivalPeriod, setArrivalPeriod)}
           scheduleDialogOpen={openSchedule === 'arrival'} onCloseScheduleDialog={() => setOpenSchedule(null)}
           selected={arrivalSelected}
-          placeLabel="대전 도착 장소" timeLabel="대전 도착 시각"
+          placeLabel="대전 도착역" timeLabel="대전 도착 시각"
           place={value.arrivalPlace} time={timeValue(value.arrivalAt)}
           onPlaceChange={(arrivalPlace) => onChange({ ...value, arrivalPlace, arrivalTrain: null })}
           onTimeChange={(time) => onChange({ ...value, arrivalAt: combineDateAndTime(outboundDate, time), arrivalTrain: null })}

@@ -5,6 +5,7 @@ import type { CoursePlaceCandidate, CoursePlaceCandidateRequest, Itinerary, Itin
 import { collectOptimizedTravelTimes, resolveNamedLocation, resolvePlaceCandidates, selectFittingPlaces } from './routePlanning';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
+import { stationNameForDisplay } from '../trains/stationName';
 import type { Game } from '../games/api';
 
 type Props = {
@@ -34,6 +35,21 @@ const PREFERENCES = [
 
 function toLocalDateTime(value: string) {
   return value.length === 16 ? `${value}:00` : value;
+}
+
+function noFittingCourseMessage(minutesToGame: number) {
+  if (!Number.isFinite(minutesToGame)) {
+    return '경기 시작 시각을 확인하지 못해 코스를 계산할 수 없어요. 경기 일정과 도착 시각을 확인해 주세요.';
+  }
+  if (minutesToGame < 0) {
+    return `경기 시작 시각이 ${Math.abs(minutesToGame)}분 지났어요. 경기 전 코스는 계산할 수 없으니 도착 시각을 확인해 주세요.`;
+  }
+  if (minutesToGame <= 30) {
+    return `경기 시작까지 ${minutesToGame}분 남았지만, 경기장 입장 여유 30분을 확보하면 코스에 쓸 시간이 없어요. 더 일찍 도착해 주세요.`;
+  }
+
+  const availableMinutes = minutesToGame - 30;
+  return `경기 시작까지 ${minutesToGame}분 남았고, 입장 여유 30분을 빼면 코스에 쓸 수 있는 시간은 ${availableMinutes}분이에요. 이동·체류시간을 고려해 가능한 코스를 찾지 못했어요. 더 일찍 도착하거나 체류 시간을 줄여 주세요.`;
 }
 
 function recommendationRequest(
@@ -169,7 +185,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
         latitude: place?.latitude ?? null,
         longitude: place?.longitude ?? null,
         placeUrl: place?.placeUrl ?? null,
-        stayDurationMinutes: 60,
+        stayDurationMinutes: 30,
       }]);
   }
 
@@ -229,7 +245,11 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    if (!journey.arrivalPlace.trim() || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
+    const arrivalStation = journey.arrivalTrain?.arrivalStation.trim();
+    const arrivalPlace = arrivalStation
+      ? stationNameForDisplay(arrivalStation)
+      : journey.arrivalPlace.trim();
+    if (!arrivalPlace || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
       setError('대전 도착·출발 장소와 시각을 모두 입력해 주세요.');
       return;
     }
@@ -245,7 +265,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
     try {
       setSavingMessage('출발지와 장소 좌표를 확인하는 중…');
       const [arrivalCoordinate, departureCoordinate, stadiumCoordinate, manualCandidates] = await Promise.all([
-        resolveNamedLocation(journey.arrivalPlace.trim(), game.city),
+        resolveNamedLocation(arrivalPlace, game.city),
         resolveNamedLocation(journey.departurePlace.trim(), game.city),
         resolveNamedLocation(game.stadium, game.city),
         resolvePlaceCandidates(places, game.city),
@@ -275,7 +295,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
             address: place.address,
             latitude: place.latitude,
             longitude: place.longitude,
-            stayDurationMinutes: 60,
+            stayDurationMinutes: 30,
             mustVisit: false,
           })),
         ];
@@ -292,7 +312,8 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       if (preferences.length) {
         const gameStartMillis = Date.parse(`${game.gameDate}T${game.gameStartTime}`);
         const arrivalMillis = Date.parse(toLocalDateTime(journey.arrivalAt));
-        const minutesUntilGame = Math.floor((gameStartMillis - arrivalMillis) / 60_000) - 30;
+        const minutesToGame = Math.floor((gameStartMillis - arrivalMillis) / 60_000);
+        const minutesUntilGame = minutesToGame - 30;
         plannedCandidates = selectFittingPlaces(
           candidates,
           travelTimes,
@@ -300,7 +321,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
           manualCandidates.map((place) => place.placeId),
         );
         if (!plannedCandidates.length) {
-          throw new Error('경기 시작 전까지 가능한 코스를 찾지 못했어요. 도착 시각, 장소, 이동수단을 조정해 주세요.');
+          throw new Error(noFittingCourseMessage(minutesToGame));
         }
         plannedTravelTimes = routeTimesForPlaces(travelTimes, plannedCandidates);
       }
@@ -308,7 +329,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       setSavingMessage('최적 순서로 일정을 계산하고 저장하는 중…');
       const itinerary = await generateItinerary({
         gameId: game.gameId,
-        arrivalPlace: journey.arrivalPlace.trim(),
+        arrivalPlace,
         arrivalAt: toLocalDateTime(journey.arrivalAt),
         arrivalTrain: journey.arrivalTrain,
         departurePlace: journey.departurePlace.trim(),
@@ -375,7 +396,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
               <option value="CAR">자동차</option>
             </select>
           </label>
-          <p className="course-order-note">선택한 장소는 실제 이동시간이 짧은 순서로 정렬됩니다. 한 장소당 체류시간은 기본 60분이며 조정할 수 있어요.</p>
+          <p className="course-order-note">선택한 장소는 실제 이동시간이 짧은 순서로 정렬됩니다. 한 장소당 체류시간은 기본 30분이며 조정할 수 있어요.</p>
           {!places.length && (
             <div className="places-empty-state">
               <p>카카오맵에서 장소를 찾아 원정 일정에 추가해 보세요.</p>

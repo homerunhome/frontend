@@ -4,6 +4,7 @@ import { ItineraryMapPreview } from './ItineraryMapPreview';
 import { searchPlaces, updateItineraryPlan } from './api';
 import type { Coordinate, Itinerary, ItineraryCandidate, ItineraryPlace, ItineraryTrain, PlaceSearchResult, TravelMode } from './api';
 import { formatApiError, measureSequentialRoute, resolveNamedLocation, resolvePlaceCandidates } from './routePlanning';
+import { stationNameForDisplay } from '../trains/stationName';
 
 type Props = {
   itinerary: Itinerary;
@@ -77,8 +78,9 @@ function trainForRequest(train: ItineraryTrain | null): ItineraryTrain | null {
 }
 
 function journeyFromItinerary(itinerary: Itinerary): JourneyDraft {
+  const arrivalStation = itinerary.arrivalTrain?.arrivalStation.trim();
   return {
-    arrivalPlace: itinerary.arrivalPlace,
+    arrivalPlace: arrivalStation ? stationNameForDisplay(arrivalStation) : itinerary.arrivalPlace,
     arrivalAt: dateTimeInputValue(itinerary.arrivalAt),
     arrivalTrain: trainForInput(itinerary.arrivalTrain),
     departurePlace: itinerary.departurePlace,
@@ -181,7 +183,7 @@ function draftFromPlace(place: ItineraryPlace, index: number): PlaceDraft {
     address: place.address ?? '',
     latitude: place.latitude ?? null,
     longitude: place.longitude ?? null,
-    stayDurationMinutes: place.stayDurationMinutes ?? 60,
+    stayDurationMinutes: place.stayDurationMinutes ?? 30,
     mustVisit: place.mustVisit ?? false,
   };
 }
@@ -201,6 +203,8 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
   const [saveMessage, setSaveMessage] = useState('');
   const [arrivalMapCoordinate, setArrivalMapCoordinate] = useState<Coordinate | null>(null);
   const [stadiumMapCoordinate, setStadiumMapCoordinate] = useState<Coordinate | null>(null);
+  const arrivalStation = itinerary.arrivalTrain?.arrivalStation.trim();
+  const arrivalPlace = arrivalStation ? stationNameForDisplay(arrivalStation) : itinerary.arrivalPlace;
 
   useEffect(() => {
     setDraftPlaces(itinerary.places.map(draftFromPlace));
@@ -213,13 +217,8 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
     let active = true;
     setArrivalMapCoordinate(null);
     setStadiumMapCoordinate(null);
-    const arrivalQuery = itinerary.arrivalPlace.trim();
-    const arrivalFallback = itinerary.arrivalTrain?.arrivalStation.trim();
-    const arrivalRequest = resolveNamedLocation(arrivalQuery).catch(() => (
-      arrivalFallback && arrivalFallback !== arrivalQuery
-        ? resolveNamedLocation(arrivalFallback).catch(() => null)
-        : null
-    ));
+    const arrivalQuery = arrivalPlace.trim();
+    const arrivalRequest = resolveNamedLocation(arrivalQuery).catch(() => null);
     const stadiumRequest = resolveNamedLocation(itinerary.stadium).catch(() => null);
 
     void Promise.all([arrivalRequest, stadiumRequest]).then(([arrival, stadium]) => {
@@ -229,7 +228,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
     });
 
     return () => { active = false; };
-  }, [itinerary.arrivalPlace, itinerary.arrivalTrain?.arrivalStation, itinerary.stadium]);
+  }, [arrivalPlace, itinerary.stadium]);
 
   const visiblePlaces = editing
     ? draftPlaces
@@ -244,7 +243,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
   const mapPins = [
     {
       key: 'ARRIVAL',
-      name: itinerary.arrivalPlace,
+      name: arrivalPlace,
       latitude: arrivalMapCoordinate?.latitude ?? null,
       longitude: arrivalMapCoordinate?.longitude ?? null,
       order: 0,
@@ -271,7 +270,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
   function updateTrain(direction: 'arrivalTrain' | 'returnTrain', key: keyof ItineraryTrain, value: string) {
     setJourney((current) => {
       const updates: Partial<JourneyDraft> = {};
-      if (direction === 'arrivalTrain' && key === 'arrivalStation') updates.arrivalPlace = value;
+      if (direction === 'arrivalTrain' && key === 'arrivalStation') updates.arrivalPlace = stationNameForDisplay(value);
       if (direction === 'arrivalTrain' && key === 'arrivalAt') updates.arrivalAt = value;
       if (direction === 'returnTrain' && key === 'departureStation') updates.departurePlace = value;
       if (direction === 'returnTrain' && key === 'departureAt') updates.departureAt = value;
@@ -314,7 +313,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
       address: place.roadAddress || place.address || '',
       latitude: place.latitude,
       longitude: place.longitude,
-      stayDurationMinutes: 60,
+      stayDurationMinutes: 30,
       mustVisit: false,
     }]);
     setSearchResults([]);
@@ -325,7 +324,11 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
   async function savePlaces(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaveMessage('');
-    if (!journey.arrivalPlace.trim() || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
+    const selectedArrivalStation = journey.arrivalTrain?.arrivalStation.trim();
+    const arrivalPlace = selectedArrivalStation
+      ? stationNameForDisplay(selectedArrivalStation)
+      : journey.arrivalPlace.trim();
+    if (!arrivalPlace || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
       setSaveMessage('도착·출발 장소와 시각을 모두 입력해 주세요.');
       return;
     }
@@ -351,7 +354,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
       setSaveMessage('출발지와 장소 좌표를 확인하는 중…');
       const candidates: ItineraryCandidate[] = await resolvePlaceCandidates(draftPlaces);
       const [arrival, stadium, departure] = await Promise.all([
-        resolveNamedLocation(journey.arrivalPlace.trim()),
+        resolveNamedLocation(arrivalPlace),
         resolveNamedLocation(itinerary.stadium),
         resolveNamedLocation(journey.departurePlace.trim()),
       ]);
@@ -359,7 +362,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
       const route = await measureSequentialRoute(arrival, stadium, departure, candidates, travelMode);
       setSaveMessage('코스 시간표를 다시 계산해 저장하는 중…');
       const updated = await updateItineraryPlan(itinerary.id, {
-        arrivalPlace: journey.arrivalPlace.trim(),
+        arrivalPlace,
         arrivalAt: apiDateTimeValue(journey.arrivalAt),
         arrivalTrain: trainForRequest(journey.arrivalTrain),
         departurePlace: journey.departurePlace.trim(),
@@ -425,7 +428,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
                   <small>열차의 도착·출발 역과 시각을 바꾸면 일정 정보도 함께 맞춰져요.</small>
                 </div>
                 <div className="detail-journey-edit-grid">
-                  <label className="field"><span>도착 장소</span><input required value={journey.arrivalPlace} onChange={(event) => setJourney((current) => ({ ...current, arrivalPlace: event.target.value, arrivalTrain: current.arrivalTrain ? { ...current.arrivalTrain, arrivalStation: event.target.value } : null }))} /></label>
+                  <label className="field"><span>도착역</span><input required value={journey.arrivalPlace} onChange={(event) => setJourney((current) => ({ ...current, arrivalPlace: event.target.value, arrivalTrain: current.arrivalTrain ? { ...current.arrivalTrain, arrivalStation: event.target.value } : null }))} /></label>
                   <label className="field"><span>도착 시각</span><input required type="datetime-local" step="60" value={journey.arrivalAt} onChange={(event) => setJourney((current) => ({ ...current, arrivalAt: event.target.value, arrivalTrain: current.arrivalTrain ? { ...current.arrivalTrain, arrivalAt: event.target.value } : null }))} /></label>
                   <label className="field"><span>출발 장소</span><input required value={journey.departurePlace} onChange={(event) => setJourney((current) => ({ ...current, departurePlace: event.target.value, returnTrain: current.returnTrain ? { ...current.returnTrain, departureStation: event.target.value } : null }))} /></label>
                   <label className="field"><span>출발 시각</span><input required type="datetime-local" step="60" value={journey.departureAt} onChange={(event) => setJourney((current) => ({ ...current, departureAt: event.target.value, returnTrain: current.returnTrain ? { ...current.returnTrain, departureAt: event.target.value } : null }))} /></label>
@@ -529,7 +532,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
                   <div className="detail-routine-boundary">
                     <span className="routine-place-order">01</span>
                     <span className="detail-routine-place-info">
-                      <strong>{itinerary.arrivalPlace}</strong>
+                      <strong>{arrivalPlace}</strong>
                       <small>{timeLabel(itinerary.arrivalAt)} 도착</small>
                     </span>
                     <span className="detail-leg-time">도착</span>
@@ -567,7 +570,7 @@ export function ItineraryDetail({ itinerary, isSaved, onBack, onUpdated, initial
               <details className="detail-extra">
                 <summary>경기 시간과 교통편</summary>
                 <dl className="detail-plan-times" aria-label="일정 시간">
-                  <div><dt>{itinerary.arrivalPlace} 도착</dt><dd>{timeLabel(itinerary.arrivalAt)}</dd></div>
+                  <div><dt>{arrivalPlace} 도착</dt><dd>{timeLabel(itinerary.arrivalAt)}</dd></div>
                   <div><dt>구장 도착</dt><dd>{timeLabel(itinerary.stadiumArrivalAt)}</dd></div>
                   <div><dt>경기 시작</dt><dd>{timeLabel(itinerary.gameDate + 'T' + itinerary.gameStartTime)}</dd></div>
                 </dl>
