@@ -3,6 +3,7 @@ import { geocodeAddress, getTravelTime, updateItineraryPlaces } from '../api/cli
 import type { Coordinate, TravelMode } from '../api/types';
 import { useItinerary } from '../api/useItinerary';
 import { formatDate, formatTime } from '../itinerary/format';
+import { stationNameForDisplay } from '../features/trains/stationName';
 import { candidateToCoursePlace, itineraryPlacesToCoursePlaces, recalculateMapPositions } from './coursePlaces';
 import { CourseMap } from './CourseMap';
 import { CoursePanel } from './CoursePanel';
@@ -66,6 +67,12 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
   const [routeState, setRouteState] = useState<RouteState>({ travelMinutes: {}, finalLegToStadiumMinutes: null, stadiumToDepartureMinutes: null, calculating: false });
 
   const travelMode: TravelMode = itinerary?.travelMode ?? 'PUBLIC_TRANSIT';
+  const arrivalPlace = itinerary
+    ? stationNameForDisplay(itinerary.arrivalTrain?.arrivalStation ?? itinerary.arrivalPlace)
+    : '';
+  const departurePlace = itinerary
+    ? stationNameForDisplay(itinerary.returnTrain?.departureStation ?? itinerary.departurePlace)
+    : '';
 
   useEffect(() => {
     if (!itinerary) return;
@@ -79,16 +86,16 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
     if (!itinerary) return;
     let active = true;
     void Promise.all([
-      geocodeAddress(itinerary.arrivalPlace),
+      geocodeAddress(arrivalPlace),
       geocodeAddress(itinerary.stadium),
-      geocodeAddress(itinerary.departurePlace),
+      geocodeAddress(departurePlace),
     ]).then(([arrival, stadium, departure]) => {
       if (active) setBoundaryCoordinates({ arrival, stadium, departure });
     }).catch((requestError: unknown) => {
       if (active) setNotice(requestError instanceof Error ? requestError.message : '출발지와 경기장 위치를 확인하지 못했습니다.');
     });
     return () => { active = false; };
-  }, [itinerary]);
+  }, [arrivalPlace, departurePlace, itinerary]);
 
   useEffect(() => {
     if (!boundaryCoordinates) return;
@@ -138,11 +145,11 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
   const mapPlaces = useMemo(() => {
     if (!itinerary || !boundaryCoordinates) return recalculateMapPositions(course);
     return recalculateMapPositions([
-      boundaryPlace('ARRIVAL', itinerary.arrivalPlace, `${formatTime(itinerary.arrivalAt)} 도착`, 'station', boundaryCoordinates.arrival),
+      boundaryPlace('ARRIVAL', arrivalPlace, `${formatTime(itinerary.arrivalAt)} 도착`, 'station', boundaryCoordinates.arrival),
       ...course,
       boundaryPlace('STADIUM', itinerary.stadium, `${formatTime(itinerary.gameStartTime)} 경기`, 'stadium', boundaryCoordinates.stadium),
     ]);
-  }, [boundaryCoordinates, course, itinerary]);
+  }, [arrivalPlace, boundaryCoordinates, course, itinerary]);
 
   if (isLoading) return <PageState title="일정을 불러오는 중입니다." message="저장된 경기와 장소 정보를 확인하고 있어요." />;
   if (error) return <PageState title="일정을 불러오지 못했습니다." message={error} onRetry={retry} />;
@@ -250,7 +257,7 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
         <section className="map-section" aria-label={`${itinerary.stadium} 원정 코스 지도`}>
           <div className="trip-card">
             <span className="trip-card__label">{formatDate(itinerary.gameDate)}</span>
-            <strong>{itinerary.arrivalPlace} {formatTime(itinerary.arrivalAt)} 도착</strong>
+            <strong>{arrivalPlace} {formatTime(itinerary.arrivalAt)} 도착</strong>
             <span>{itinerary.homeTeam} vs {itinerary.awayTeam} · {formatTime(itinerary.gameStartTime)} 경기</span>
             <div className="trip-card__meta"><span>방문 {course.length}곳</span><span>{modeLabels[travelMode]}</span></div>
           </div>
@@ -269,7 +276,7 @@ export function CourseEditPage({ itineraryId }: { itineraryId: number }) {
               selectedPlaceId={selectedPlaceId}
               travelMinutes={routeState.travelMinutes}
               travelModeLabel={modeLabels[travelMode]}
-              departureLabel={`${itinerary.departurePlace} ${formatTime(itinerary.departureAt)} 출발`}
+            departureLabel={`${departurePlace} ${formatTime(itinerary.departureAt)} 출발`}
               onSelectPlace={setSelectedPlaceId}
               onMovePlace={movePlace}
               onRemovePlace={removePlace}
