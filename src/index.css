@@ -909,6 +909,7 @@ body { caret-color: var(--orange); }
   grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
 }
 .detail-map-pane { min-width: 0; min-height: 0; overflow: hidden; background: #f1f5f0; }
+.detail-map-pane .routine-map-card { width: 100%; height: 100%; }
 .detail-map-pane .routine-map-card,
 .detail-map-pane .routine-map-canvas { background: #f1f5f0; }
 .detail-map-pane .routine-map-state {
