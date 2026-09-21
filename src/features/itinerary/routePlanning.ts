@@ -119,6 +119,61 @@ export async function collectOptimizedTravelTimes(
   }));
 }
 
+export function selectFittingPlaces(
+  places: ItineraryCandidate[],
+  travelTimes: ItineraryRouteTime[],
+  availableMinutes: number,
+  mandatoryPlaceIds: string[] = [],
+): ItineraryCandidate[] {
+  if (places.length === 0) return [];
+  if (places.length > 8) throw new Error('자동 코스에는 장소를 최대 8곳까지 추가할 수 있어요.');
+
+  const mandatoryIds = new Set(mandatoryPlaceIds);
+  const mandatoryMask = places.reduce((mask, place, index) => (
+    mandatoryIds.has(place.placeId) ? mask | (1 << index) : mask
+  ), 0);
+  const minutesByLeg = new Map(
+    travelTimes.map((leg) => [`${leg.fromPlaceId}\u0000${leg.toPlaceId}`, leg.minutes]),
+  );
+  const durationFor = (lastIndex: number, elapsedMinutes: number) => {
+    const fromPlaceId = lastIndex < 0 ? 'ARRIVAL' : places[lastIndex].placeId;
+    const finalLeg = minutesByLeg.get(`${fromPlaceId}\u0000STADIUM`);
+    return finalLeg === undefined ? Number.POSITIVE_INFINITY : elapsedMinutes + finalLeg;
+  };
+
+  let bestMask = -1;
+  let bestOptionalCount = -1;
+  let bestDuration = Number.POSITIVE_INFINITY;
+
+  function visit(mask: number, lastIndex: number, elapsedMinutes: number) {
+    const completeDuration = durationFor(lastIndex, elapsedMinutes);
+    if ((mask & mandatoryMask) === mandatoryMask && completeDuration <= availableMinutes) {
+      const visitedOptionalCount = places.reduce((count, place, index) => (
+        mandatoryIds.has(place.placeId) || (mask & (1 << index)) === 0 ? count : count + 1
+      ), 0);
+      if (visitedOptionalCount > bestOptionalCount
+        || (visitedOptionalCount === bestOptionalCount && completeDuration < bestDuration)) {
+        bestMask = mask;
+        bestOptionalCount = visitedOptionalCount;
+        bestDuration = completeDuration;
+      }
+    }
+
+    for (let index = 0; index < places.length; index++) {
+      const bit = 1 << index;
+      if (mask & bit) continue;
+      const fromPlaceId = lastIndex < 0 ? 'ARRIVAL' : places[lastIndex].placeId;
+      const travelMinutes = minutesByLeg.get(`${fromPlaceId}\u0000${places[index].placeId}`);
+      if (travelMinutes === undefined) continue;
+      visit(mask | bit, index, elapsedMinutes + travelMinutes + places[index].stayDurationMinutes);
+    }
+  }
+
+  visit(0, -1, 0);
+  const selectedMask = bestMask >= 0 ? bestMask : mandatoryMask;
+  return places.filter((_, index) => (selectedMask & (1 << index)) !== 0);
+}
+
 export async function measureSequentialRoute(
   arrival: Coordinate,
   stadium: Coordinate,

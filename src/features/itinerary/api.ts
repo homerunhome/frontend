@@ -51,6 +51,42 @@ export type PlaceSearchResponse = {
   hasNext: boolean;
 };
 
+export type CoursePlaceCategory =
+  | 'FOOD'
+  | 'CAFE'
+  | 'CONVENIENCE_STORE'
+  | 'ACTIVITY'
+  | 'TOURIST_ATTRACTION'
+  | 'CULTURAL_FACILITY'
+  | 'FESTIVAL_EVENT';
+
+export type CoursePlaceCandidateRequest = {
+  scope: 'CURRENT_LOCATION' | 'DAEJEON_HOTSPOT';
+  categories: CoursePlaceCategory[];
+  center?: Coordinate;
+  hotspot?: 'EUNHAENG_DAEHEUNG' | 'SOJE_DONG' | 'DUNSAN_DONG' | 'EXPO' | 'YUSEONG';
+  keyword?: string;
+  maxDistanceMeters?: number;
+  limit?: number;
+};
+
+export type CoursePlaceCandidate = {
+  provider: 'KAKAO' | 'TOUR_API';
+  externalId: string;
+  name: string;
+  category: CoursePlaceCategory;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  imageUrl: string | null;
+  detailUrl: string | null;
+  distanceMeters: number | null;
+};
+
+type CoursePlaceCandidateResponse = {
+  places: CoursePlaceCandidate[];
+};
+
 export type ItineraryRequest = {
   gameId: string;
   arrivalPlace: string;
@@ -94,6 +130,24 @@ export type GenerateItineraryRequest = {
 };
 
 export type EditItineraryPlacesRequest = {
+  stadiumEntryBufferMinutes: number;
+  finalLegToStadiumMinutes: number;
+  stadiumToDepartureMinutes: number;
+  postGameCrowdBufferMinutes: number;
+  boardingBufferMinutes: number;
+  travelMode: TravelMode;
+  expectedGameDurationMinutes: number;
+  places: (ItineraryCandidate & { travelFromPreviousMinutes: number })[];
+};
+
+export type EditItineraryPlanRequest = {
+  arrivalPlace: string;
+  arrivalAt: string;
+  arrivalTrain: ItineraryTrain | null;
+  departurePlace: string;
+  departureAt: string;
+  returnTrain: ItineraryTrain | null;
+  preferences: string[];
   stadiumEntryBufferMinutes: number;
   finalLegToStadiumMinutes: number;
   stadiumToDepartureMinutes: number;
@@ -158,6 +212,14 @@ export function updateItineraryPlaces(id: number, body: EditItineraryPlacesReque
   });
 }
 
+export function updateItineraryPlan(id: number, body: EditItineraryPlanRequest): Promise<Itinerary> {
+  return request<Itinerary>(`/api/itineraries/${id}/plan`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 export type Coordinate = { latitude: number; longitude: number };
 
 export async function geocodeAddress(address: string): Promise<Coordinate> {
@@ -191,5 +253,13 @@ export function searchPlaces(keyword: string, page = 1, size = 15): Promise<Plac
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ keyword, page, size }),
+  });
+}
+
+export function getCoursePlaceCandidates(body: CoursePlaceCandidateRequest): Promise<CoursePlaceCandidateResponse> {
+  return request<CoursePlaceCandidateResponse>('/api/course-place-candidates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }
