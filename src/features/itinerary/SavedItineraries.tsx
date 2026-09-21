@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getItinerary } from './api';
 import type { Itinerary } from './api';
+import { stationNameForDisplay } from '../trains/stationName';
 
 type Props = {
   ids: number[];
@@ -52,21 +53,25 @@ export function SavedItineraries({ ids, onSelect, onRemove, onBrowseGames }: Pro
         <div className="state-panel"><div><strong>저장한 일정이 아직 없어요.</strong><p>경기 목록에서 첫 원정 계획을 만들어 보세요.</p></div><button className="button button-primary" type="button" onClick={onBrowseGames}>경기 고르기</button></div>
       )}
       {!loading && itineraries.length > 0 && (
-        <div className="saved-list">{itineraries.map((item) => (
-          <article className="saved-card" key={item.id}>
-            <span className="saved-date"><strong>{shortDate(item.gameDate)}</strong><small>{item.gameStartTime.slice(0, 5)}</small></span>
-            <button className="saved-card-main" type="button" onClick={() => onSelect(item)}>
-              <span className="saved-info"><strong>{item.homeTeam} <small>VS</small> {item.awayTeam}</strong><span>{item.stadium}</span><small>{item.arrivalPlace} 도착 · {item.arrivalAt.split('T')[1]?.slice(0, 5)}</small></span>
-              <span className="saved-open-indicator" aria-hidden="true">→</span>
-            </button>
-            <div className="saved-card-actions">
-              <span className="saved-id">#{item.id}</span>
-              <button className="saved-card-remove" type="button" onClick={() => onRemove(item.id)} aria-label={`${item.homeTeam} 대 ${item.awayTeam} 일정을 목록에서 제거`} title="이 브라우저의 목록에서만 제거합니다.">
-                목록에서 제거
+        <div className="saved-list">{itineraries.map((item) => {
+          const arrivalStation = item.arrivalTrain?.arrivalStation.trim();
+          const arrivalPlace = arrivalStation ? stationNameForDisplay(arrivalStation) : item.arrivalPlace;
+          return (
+            <article className="saved-card" key={item.id}>
+              <span className="saved-date"><strong>{shortDate(item.gameDate)}</strong><small>{item.gameStartTime.slice(0, 5)}</small></span>
+              <button className="saved-card-main" type="button" onClick={() => onSelect(item)}>
+                <span className="saved-info"><strong>{item.homeTeam} <small>VS</small> {item.awayTeam}</strong><span>{item.stadium}</span><small>{arrivalPlace} 도착 · {item.arrivalAt.split('T')[1]?.slice(0, 5)}</small></span>
+                <span className="saved-open-indicator" aria-hidden="true">→</span>
               </button>
-            </div>
-          </article>
-        ))}</div>
+              <div className="saved-card-actions">
+                <span className="saved-id">#{item.id}</span>
+                <button className="saved-card-remove" type="button" onClick={() => onRemove(item.id)} aria-label={`${item.homeTeam} 대 ${item.awayTeam} 일정을 목록에서 제거`} title="이 브라우저의 목록에서만 제거합니다.">
+                  목록에서 제거
+                </button>
+              </div>
+            </article>
+          );
+        })}</div>
       )}
     </section>
   );

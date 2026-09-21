@@ -5,6 +5,7 @@ import type { CoursePlaceCandidate, CoursePlaceCandidateRequest, Itinerary, Itin
 import { collectOptimizedTravelTimes, resolveNamedLocation, resolvePlaceCandidates, selectFittingPlaces } from './routePlanning';
 import { TrainJourneyPicker } from '../trains/TrainJourneyPicker';
 import type { JourneyInput } from '../trains/TrainJourneyPicker';
+import { stationNameForDisplay } from '../trains/stationName';
 import type { Game } from '../games/api';
 
 type Props = {
@@ -244,7 +245,11 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    if (!journey.arrivalPlace.trim() || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
+    const arrivalStation = journey.arrivalTrain?.arrivalStation.trim();
+    const arrivalPlace = arrivalStation
+      ? stationNameForDisplay(arrivalStation)
+      : journey.arrivalPlace.trim();
+    if (!arrivalPlace || !journey.arrivalAt || !journey.departurePlace.trim() || !journey.departureAt) {
       setError('대전 도착·출발 장소와 시각을 모두 입력해 주세요.');
       return;
     }
@@ -260,7 +265,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
     try {
       setSavingMessage('출발지와 장소 좌표를 확인하는 중…');
       const [arrivalCoordinate, departureCoordinate, stadiumCoordinate, manualCandidates] = await Promise.all([
-        resolveNamedLocation(journey.arrivalPlace.trim(), game.city),
+        resolveNamedLocation(arrivalPlace, game.city),
         resolveNamedLocation(journey.departurePlace.trim(), game.city),
         resolveNamedLocation(game.stadium, game.city),
         resolvePlaceCandidates(places, game.city),
@@ -324,7 +329,7 @@ export function ItineraryPlanner({ game, onCancel, onSaved }: Props) {
       setSavingMessage('최적 순서로 일정을 계산하고 저장하는 중…');
       const itinerary = await generateItinerary({
         gameId: game.gameId,
-        arrivalPlace: journey.arrivalPlace.trim(),
+        arrivalPlace,
         arrivalAt: toLocalDateTime(journey.arrivalAt),
         arrivalTrain: journey.arrivalTrain,
         departurePlace: journey.departurePlace.trim(),
